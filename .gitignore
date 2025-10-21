@@ -1,0 +1,15 @@
+# Rust build artifacts
+/target/
+Cargo.lock
+
+# Internal documentation and debug files
+/internal_docs/
+
+# Model files (too large for git)
+*.gguf
+
+# IDE/tools
+.vscode/
+.claude/
+.cache/
+__pycache__/
