@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-10-22
+
+### Added
+- Support for Mistral models (SentencePiece tokenizer)
+- Support for Qwen/Qwen2 models (BPE tokenizer)
+- Support for Gemma models (SentencePiece tokenizer)
+- `model_type()` method to query tokenizer model type
+
+### Documentation
+- Updated README with expanded model support table
+- Added Mistral, Qwen, and Gemma to supported models list
+
 ## [0.2.0] - 2025-10-22
 
 ### Added
@@ -63,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Security policy
 - DCO (Developer Certificate of Origin)
 
-[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Michael-A-Kuykendall/shimmytok/releases/tag/v0.1.0

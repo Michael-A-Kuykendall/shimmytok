@@ -31,7 +31,10 @@
 //! ## Supported Models
 //!
 //! - ✅ LLaMA / Llama-2 / Llama-3 (SentencePiece)
+//! - ✅ Mistral (SentencePiece)
 //! - ✅ Phi-3 (SentencePiece)
+//! - ✅ Qwen / Qwen2 (BPE)
+//! - ✅ Gemma (SentencePiece)
 //! - ✅ GPT-2 / GPT-3 style BPE
 
 use rayon::prelude::*;
@@ -114,7 +117,10 @@ impl Tokenizer {
 
         let tokenizer_impl: Box<dyn TokenizerImpl> = match vocab.model_type() {
             "llama" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
+            "mistral" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
             "gpt2" => Box::new(bpe::BPETokenizer::new()),
+            "qwen" | "qwen2" => Box::new(bpe::BPETokenizer::new()),
+            "gemma" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
             model => return Err(Error::UnsupportedModel(model.to_string())),
         };
 
@@ -229,6 +235,29 @@ impl Tokenizer {
     /// The token ID used to mark the end of a sequence.
     pub fn eos_token(&self) -> TokenId {
         self.vocab.eos_token_id()
+    }
+
+    /// Get the tokenizer model type
+    ///
+    /// Returns the model type identifier from the GGUF metadata.
+    ///
+    /// # Returns
+    ///
+    /// The model type string, such as "llama", "mistral", "gpt2", "qwen", "qwen2", or "gemma".
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::Tokenizer;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+    /// println!("Model type: {}", tokenizer.model_type());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn model_type(&self) -> &str {
+        self.vocab.model_type()
     }
 
     /// Encode multiple texts in parallel
