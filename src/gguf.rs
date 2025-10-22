@@ -26,6 +26,9 @@ pub fn load_metadata<P: AsRef<Path>>(path: P) -> Result<GGUFMetadata, Error> {
     let file = File::open(path)?;
     let mut reader = BufReader::new(file);
 
+    // Track total string allocation to prevent OOM (Issue R2#3)
+    let mut total_string_bytes: usize = 0;
+
     // Read magic
     let mut magic = [0u8; 4];
     reader.read_exact(&mut magic)?;
@@ -51,8 +54,8 @@ pub fn load_metadata<P: AsRef<Path>>(path: P) -> Result<GGUFMetadata, Error> {
     // Read metadata key-value pairs
     let mut kv_pairs = HashMap::new();
     for _ in 0..metadata_count {
-        let key = read_string(&mut reader)?;
-        let value = read_value(&mut reader)?;
+        let key = read_string(&mut reader, &mut total_string_bytes)?;
+        let value = read_value(&mut reader, &mut total_string_bytes)?;
         kv_pairs.insert(key, value);
     }
 
@@ -192,8 +195,9 @@ fn read_f32<R: Read>(reader: &mut R) -> Result<f32, Error> {
     Ok(f32::from_le_bytes(buf))
 }
 
-fn read_string<R: Read>(reader: &mut R) -> Result<String, Error> {
-    const MAX_STRING_SIZE: usize = 1024 * 1024; // 1MB max
+fn read_string<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<String, Error> {
+    const MAX_STRING_SIZE: usize = 1024 * 1024; // 1MB max per string
+    const MAX_TOTAL_STRING_DATA: usize = 100 * 1024 * 1024; // 100MB total
     let len = read_u64(reader)? as usize;
     
     if len > MAX_STRING_SIZE {
@@ -202,13 +206,22 @@ fn read_string<R: Read>(reader: &mut R) -> Result<String, Error> {
             len, MAX_STRING_SIZE
         )));
     }
+
+    // Check total allocation (Issue R2#3)
+    *total_bytes += len;
+    if *total_bytes > MAX_TOTAL_STRING_DATA {
+        return Err(Error::InvalidMetadata(format!(
+            "Total string data too large: {} bytes (max: {})",
+            *total_bytes, MAX_TOTAL_STRING_DATA
+        )));
+    }
     
     let mut buf = vec![0u8; len];
     reader.read_exact(&mut buf)?;
     String::from_utf8(buf).map_err(|e| Error::InvalidMetadata(format!("Invalid UTF-8: {}", e)))
 }
 
-fn read_value<R: Read>(reader: &mut R) -> Result<Value, Error> {
+fn read_value<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Value, Error> {
     let type_id = read_u32(reader)?;
 
     match type_id {
@@ -220,7 +233,7 @@ fn read_value<R: Read>(reader: &mut R) -> Result<Value, Error> {
             reader.read_exact(&mut byte)?;
             Ok(Value::Bool(byte[0] != 0))
         }
-        8 => Ok(Value::String(read_string(reader)?)),
+        8 => Ok(Value::String(read_string(reader, total_bytes)?)),
         9 => {
             // Array
             let array_type = read_u32(reader)?;
@@ -247,7 +260,7 @@ fn read_value<R: Read>(reader: &mut R) -> Result<Value, Error> {
                     // String array
                     let mut arr = Vec::with_capacity(array_len);
                     for _ in 0..array_len {
-                        arr.push(read_string(reader)?);
+                        arr.push(read_string(reader, total_bytes)?);
                     }
                     Ok(Value::StringArray(arr))
                 }

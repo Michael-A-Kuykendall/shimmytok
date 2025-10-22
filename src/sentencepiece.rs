@@ -143,15 +143,17 @@ impl TokenizerImpl for SentencePieceTokenizer {
         }
 
         // Process merges in priority order
-        // Add iteration limit to prevent infinite loops
-        let max_iterations = 10 * symbols.len().max(1);
+        // Add iteration limit to prevent infinite loops (Issue R2#2)
+        // Cap at 100K iterations regardless of input size to prevent DoS
+        let max_iterations = (10 * symbols.len()).min(100_000);
         let mut iterations = 0;
         while let Some(bigram) = work_queue.pop() {
             iterations += 1;
             if iterations > max_iterations {
-                return Err(crate::Error::TokenizationFailed(
-                    "SentencePiece merge iteration limit exceeded".to_string()
-                ));
+                return Err(crate::Error::TokenizationFailed(format!(
+                    "SentencePiece merge iteration limit exceeded: {} iterations (max: {})",
+                    iterations, max_iterations
+                )));
             }
             
             if bigram.left >= symbols.len() || bigram.right >= symbols.len() {
@@ -235,6 +237,7 @@ impl TokenizerImpl for SentencePieceTokenizer {
                     &rev_merge,
                     vocab,
                     &mut result,
+                    0, // Initial depth
                 );
                 // Check output size after resegment
                 if result.len() > MAX_OUTPUT_TOKENS {
@@ -336,7 +339,18 @@ fn resegment(
     rev_merge: &HashMap<String, (usize, usize)>,
     vocab: &Vocabulary,
     output: &mut Vec<TokenId>,
+    depth: usize,
 ) {
+    // Prevent stack overflow from deep recursion (Issue R2#9)
+    const MAX_RECURSION_DEPTH: usize = 1000;
+    if depth > MAX_RECURSION_DEPTH {
+        // Fallback to byte encoding on deep recursion
+        for byte in text.bytes() {
+            output.push(vocab.byte_to_token(byte));
+        }
+        return;
+    }
+
     // Try to find the text as a complete token
     if let Some(token_id) = vocab.get_token_id(text) {
         output.push(token_id);
@@ -352,11 +366,11 @@ fn resegment(
 
             if left_sym.len > 0 {
                 let left_text = &full_text[left_sym.pos..left_sym.pos + left_sym.len];
-                resegment(left_text, full_text, symbols, rev_merge, vocab, output);
+                resegment(left_text, full_text, symbols, rev_merge, vocab, output, depth + 1);
             }
             if right_sym.len > 0 {
                 let right_text = &full_text[right_sym.pos..right_sym.pos + right_sym.len];
-                resegment(right_text, full_text, symbols, rev_merge, vocab, output);
+                resegment(right_text, full_text, symbols, rev_merge, vocab, output, depth + 1);
             }
             return;
         }

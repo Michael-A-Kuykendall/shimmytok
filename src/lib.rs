@@ -45,6 +45,11 @@ pub mod vocab;
 pub use vocab::{TokenType, Vocabulary};
 
 /// Token ID type used throughout the library
+/// Type alias for token IDs
+///
+/// Token IDs are represented as u32 to match GGUF format and llama.cpp implementation.
+/// This is safe because vocabulary size is limited to MAX_VOCAB_SIZE (1M tokens),
+/// which is well below u32::MAX (4.2B). (Issue R2#10)
 pub type TokenId = u32;
 
 /// Main tokenizer interface for encoding and decoding text
