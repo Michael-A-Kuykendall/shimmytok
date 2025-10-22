@@ -50,3 +50,32 @@ fn test_load_gguf() {
         }
     }
 }
+
+#[test]
+fn test_encode_batch() {
+    let model_path = std::env::var("GGUF_MODEL_PATH").unwrap_or_else(|_| {
+        dirs::home_dir()
+            .map(|h| h.join(".cache/models/gguf/gpt2.Q4_K_M.gguf"))
+            .and_then(|p| p.to_str().map(String::from))
+            .unwrap_or_else(|| "model.gguf".to_string())
+    });
+
+    if !std::path::Path::new(&model_path).exists() {
+        eprintln!(
+            "Skipping test_encode_batch: model not found at {}",
+            model_path
+        );
+        return;
+    }
+
+    let tokenizer = Tokenizer::from_gguf_file(&model_path).unwrap();
+
+    let texts = vec!["Hello world", "Goodbye world", "Rust is great"];
+    let batch = tokenizer.encode_batch(&texts, false).unwrap();
+
+    // Verify matches sequential
+    for (i, text) in texts.iter().enumerate() {
+        let sequential = tokenizer.encode(text, false).unwrap();
+        assert_eq!(batch[i], sequential, "Batch mismatch for: {}", text);
+    }
+}
