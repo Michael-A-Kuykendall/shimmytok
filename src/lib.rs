@@ -301,6 +301,145 @@ impl Tokenizer {
             .map(|text| self.encode(text, add_special_tokens))
             .collect()
     }
+
+    /// Decode a single token to text
+    ///
+    /// This is useful for streaming generation where tokens are produced one at a time.
+    /// Unlike `decode()`, this method handles single tokens more efficiently and is
+    /// optimized for real-time streaming use cases.
+    ///
+    /// # Arguments
+    ///
+    /// * `token` - The token ID to decode
+    /// * `skip_special_tokens` - If true, returns empty string for special tokens
+    ///
+    /// # Returns
+    ///
+    /// Returns the decoded text for this token.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::Tokenizer;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+    ///
+    /// // Streaming generation simulation
+    /// let tokens = vec![1, 15043, 3186]; // BOS, "Hello", "world"
+    /// for token in tokens {
+    ///     let text = tokenizer.decode_single(token, true)?;
+    ///     print!("{}", text); // Prints: Helloworld
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use = "decode_single returns a Result that must be handled"]
+    pub fn decode_single(
+        &self,
+        token: TokenId,
+        skip_special_tokens: bool,
+    ) -> Result<String, Error> {
+        if skip_special_tokens && self.vocab.is_special_token(token) {
+            return Ok(String::new());
+        }
+        self.tokenizer_impl.decode(&[token], &self.vocab)
+    }
+
+    /// Get the text representation of a token
+    ///
+    /// Returns the raw token piece (vocabulary entry) for a given token ID.
+    /// This is useful for debugging and introspection.
+    ///
+    /// # Arguments
+    ///
+    /// * `token` - The token ID to look up
+    ///
+    /// # Returns
+    ///
+    /// Returns the token text, or an error if the token ID is invalid.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::Tokenizer;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+    /// let piece = tokenizer.token_to_piece(15043)?; // "Hello"
+    /// println!("Token piece: {}", piece);
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use = "token_to_piece returns a Result that must be handled"]
+    pub fn token_to_piece(&self, token: TokenId) -> Result<String, Error> {
+        self.vocab
+            .get_token_text(token)
+            .map(String::from)
+            .ok_or_else(|| Error::InvalidToken(format!("Token ID {} out of range", token)))
+    }
+
+    /// Get the type of a token
+    ///
+    /// Returns the token type classification from the vocabulary.
+    ///
+    /// # Arguments
+    ///
+    /// * `token` - The token ID to query
+    ///
+    /// # Returns
+    ///
+    /// Returns the token type, or `TokenType::Undefined` if the token ID is invalid.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::Tokenizer;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+    /// let token_type = tokenizer.token_type(1); // BOS token
+    /// println!("Token type: {:?}", token_type);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn token_type(&self, token: TokenId) -> TokenType {
+        if token >= self.vocab.n_tokens() as TokenId {
+            return TokenType::Undefined;
+        }
+        self.vocab.get_token_type(token)
+    }
+
+    /// Check if a token is a special token
+    ///
+    /// Returns true if the token is a special token (BOS, EOS, UNK, PAD, or Control type).
+    ///
+    /// # Arguments
+    ///
+    /// * `token` - The token ID to check
+    ///
+    /// # Returns
+    ///
+    /// Returns true if the token is special, false otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::Tokenizer;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+    /// let is_special = tokenizer.is_special_token(1); // BOS token
+    /// println!("Is special: {}", is_special); // true
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn is_special_token(&self, token: TokenId) -> bool {
+        if token >= self.vocab.n_tokens() as TokenId {
+            return false;
+        }
+        self.vocab.is_special_token(token)
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
