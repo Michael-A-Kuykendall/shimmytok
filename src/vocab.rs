@@ -102,6 +102,14 @@ impl Vocabulary {
 
         // Validate merge rules reference valid tokens (Issue #12)
         if let Some(ref merges) = metadata.merges {
+            const MAX_MERGE_COUNT: usize = 1_000_000; // 1M merges max (Issue R3#14)
+            if merges.len() > MAX_MERGE_COUNT {
+                return Err(Error::VocabularyError(format!(
+                    "Too many merge rules: {} (max: {})",
+                    merges.len(), MAX_MERGE_COUNT
+                )));
+            }
+
             for (rank, (left, right)) in merges.iter().enumerate() {
                 if !token_to_id.contains_key(left) {
                     return Err(Error::VocabularyError(format!(
@@ -118,12 +126,32 @@ impl Vocabulary {
             }
         }
 
+        let scores = metadata.scores.unwrap_or_else(|| vec![0.0; num_tokens]);
+        
+        // Validate scores length matches tokens (Issue R3#11)
+        if scores.len() != num_tokens {
+            return Err(Error::VocabularyError(format!(
+                "Score array length mismatch: {} scores for {} tokens",
+                scores.len(), num_tokens
+            )));
+        }
+
         Ok(Self {
             tokens: metadata.tokens,
-            scores: metadata.scores.unwrap_or_else(|| vec![0.0; num_tokens]),
-            token_types: metadata
-                .token_types
-                .unwrap_or_else(|| vec![TokenType::Normal; num_tokens]),
+            scores,
+            token_types: {
+                let types = metadata
+                    .token_types
+                    .unwrap_or_else(|| vec![TokenType::Normal; num_tokens]);
+                // Validate token_types length (Issue R3#11)
+                if types.len() != num_tokens {
+                    return Err(Error::VocabularyError(format!(
+                        "Token types length mismatch: {} types for {} tokens",
+                        types.len(), num_tokens
+                    )));
+                }
+                types
+            },
             token_to_id,
 
             model_type: metadata.model_type,

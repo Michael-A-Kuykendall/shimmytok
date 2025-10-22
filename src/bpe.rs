@@ -311,18 +311,18 @@ impl BPETokenizer {
             .collect::<Vec<_>>()
             .join("");
 
-        // Validate output size (Issue #10)
-        const MAX_DECODE_SIZE: usize = 100 * 1024 * 1024; // 100MB
-        if byte_encoded_text.len() > MAX_DECODE_SIZE {
-            return Err(crate::Error::TokenizationFailed(format!(
-                "Decoded text too large: {} bytes (max: {})",
-                byte_encoded_text.len(),
-                MAX_DECODE_SIZE
-            )));
-        }
-
         // Convert from GPT-2 byte encoding back to normal UTF-8
         let decoded = crate::byte_encoder::decode_bytes(&byte_encoded_text);
+
+        // Validate final decoded size (Issue R3#8) - decoding can expand
+        const MAX_DECODED_SIZE: usize = 100 * 1024 * 1024; // 100MB
+        if decoded.len() > MAX_DECODED_SIZE {
+            return Err(crate::Error::TokenizationFailed(format!(
+                "Final decoded text too large: {} bytes (max: {})",
+                decoded.len(),
+                MAX_DECODED_SIZE
+            )));
+        }
         
         // Validate UTF-8 (decode_bytes uses lossy conversion, check if it's valid)
         if !decoded.is_empty() && decoded.as_bytes().iter().any(|&b| b == 0xEF && decoded.contains('�')) {

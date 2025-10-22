@@ -96,6 +96,15 @@ impl TokenizerImpl for SentencePieceTokenizer {
             text.replace(' ', "▁")
         };
 
+        // Validate processed size (Issue R3#10) - ▁ is 3 bytes UTF-8
+        if processed_text.len() > MAX_INPUT_SIZE {
+            return Err(crate::Error::TokenizationFailed(format!(
+                "Processed text too large: {} bytes (max: {})",
+                processed_text.len(),
+                MAX_INPUT_SIZE
+            )));
+        }
+
         // Split text into UTF-8 characters
         let mut symbols = Vec::new();
         let mut char_indices = processed_text.char_indices().peekable();
@@ -148,13 +157,14 @@ impl TokenizerImpl for SentencePieceTokenizer {
         let max_iterations = (10 * symbols.len()).min(100_000);
         let mut iterations = 0;
         while let Some(bigram) = work_queue.pop() {
-            iterations += 1;
-            if iterations > max_iterations {
+            // Check limit BEFORE doing work (Issue R3#3)
+            if iterations >= max_iterations {
                 return Err(crate::Error::TokenizationFailed(format!(
                     "SentencePiece merge iteration limit exceeded: {} iterations (max: {})",
                     iterations, max_iterations
                 )));
             }
+            iterations += 1;
             
             if bigram.left >= symbols.len() || bigram.right >= symbols.len() {
                 continue;
@@ -341,9 +351,9 @@ fn resegment(
     output: &mut Vec<TokenId>,
     depth: usize,
 ) {
-    // Prevent stack overflow from deep recursion (Issue R2#9)
+    // Prevent stack overflow from deep recursion (Issue R3#4)
     const MAX_RECURSION_DEPTH: usize = 1000;
-    if depth > MAX_RECURSION_DEPTH {
+    if depth >= MAX_RECURSION_DEPTH {
         // Fallback to byte encoding on deep recursion
         for byte in text.bytes() {
             output.push(vocab.byte_to_token(byte));

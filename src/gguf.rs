@@ -207,8 +207,11 @@ fn read_string<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Strin
         )));
     }
 
-    // Check total allocation (Issue R2#3)
-    *total_bytes += len;
+    // Check total allocation with overflow protection (Issue R3#2)
+    *total_bytes = total_bytes.checked_add(len)
+        .ok_or_else(|| Error::InvalidMetadata(
+            "Total string data overflow".to_string()
+        ))?;
     if *total_bytes > MAX_TOTAL_STRING_DATA {
         return Err(Error::InvalidMetadata(format!(
             "Total string data too large: {} bytes (max: {})",
