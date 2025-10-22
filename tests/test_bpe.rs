@@ -12,12 +12,14 @@ fn get_model_path() -> String {
 fn test_gpt2_tokenization() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!("Skipping test_gpt2_tokenization: model not found at {}", model_path);
+        eprintln!(
+            "Skipping test_gpt2_tokenization: model not found at {}",
+            model_path
+        );
         return;
     }
-    
-    let tokenizer =
-        Tokenizer::from_gguf_file(&model_path).expect("Failed to load GPT-2 model");
+
+    let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load GPT-2 model");
 
     println!("Vocab size: {}", tokenizer.vocab_size());
 

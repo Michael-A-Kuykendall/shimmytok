@@ -13,7 +13,10 @@ fn get_model_path() -> String {
 fn test_empty_string() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!("Skipping test_empty_string: model not found at {}", model_path);
+        eprintln!(
+            "Skipping test_empty_string: model not found at {}",
+            model_path
+        );
         return;
     }
     let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
@@ -29,7 +32,10 @@ fn test_empty_string() {
 fn test_single_char() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!("Skipping test_single_char: model not found at {}", model_path);
+        eprintln!(
+            "Skipping test_single_char: model not found at {}",
+            model_path
+        );
         return;
     }
     let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
@@ -45,7 +51,10 @@ fn test_single_char() {
 fn test_unicode_emoji() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!("Skipping test_unicode_emoji: model not found at {}", model_path);
+        eprintln!(
+            "Skipping test_unicode_emoji: model not found at {}",
+            model_path
+        );
         return;
     }
     let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
@@ -63,7 +72,10 @@ fn test_unicode_emoji() {
 fn test_unicode_cjk() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!("Skipping test_unicode_cjk: model not found at {}", model_path);
+        eprintln!(
+            "Skipping test_unicode_cjk: model not found at {}",
+            model_path
+        );
         return;
     }
     let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
@@ -83,7 +95,10 @@ fn test_unicode_cjk() {
 fn test_special_chars() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!("Skipping test_special_chars: model not found at {}", model_path);
+        eprintln!(
+            "Skipping test_special_chars: model not found at {}",
+            model_path
+        );
         return;
     }
     let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
@@ -100,7 +115,10 @@ fn test_special_chars() {
 fn test_long_string() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!("Skipping test_long_string: model not found at {}", model_path);
+        eprintln!(
+            "Skipping test_long_string: model not found at {}",
+            model_path
+        );
         return;
     }
     let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
@@ -120,7 +138,10 @@ fn test_long_string() {
 fn test_newlines_and_tabs() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!("Skipping test_newlines_and_tabs: model not found at {}", model_path);
+        eprintln!(
+            "Skipping test_newlines_and_tabs: model not found at {}",
+            model_path
+        );
         return;
     }
     let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
@@ -137,7 +158,10 @@ fn test_newlines_and_tabs() {
 fn test_multiple_spaces() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!("Skipping test_multiple_spaces: model not found at {}", model_path);
+        eprintln!(
+            "Skipping test_multiple_spaces: model not found at {}",
+            model_path
+        );
         return;
     }
     let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
