@@ -120,11 +120,20 @@ Both algorithms are direct ports from llama.cpp source code analysis.
 - Optimized for correctness, not yet for maximum performance
 - Implements 2 most common pre-tokenizer patterns (GPT-2, Llama-3); additional patterns can be added as needed
 
+## Project Status & Roadmap
+
+**Status**: ✅ v0.1.0 published and production-ready  
+**API Stability**: Locked for libshimmy integration  
+**Maintenance**: Stable - accepting bug fixes and non-breaking enhancements
+
+📍 **[See ROADMAP.md for future plans](ROADMAP.md)** - Performance optimization, new model types, WASM support, and more!
+
 ## Community & Support
 
 - **🐛 Bug Reports**: [GitHub Issues](https://github.com/Michael-A-Kuykendall/shimmytok/issues)
 - **💬 Discussions**: [GitHub Discussions](https://github.com/Michael-A-Kuykendall/shimmytok/discussions)
 - **💝 Sponsorship**: [GitHub Sponsors](https://github.com/sponsors/Michael-A-Kuykendall)
+- **🗺️ Roadmap**: [ROADMAP.md](ROADMAP.md)
 
 ### 💝 Support shimmytok's Growth
 
