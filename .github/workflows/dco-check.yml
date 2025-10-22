@@ -18,7 +18,7 @@ jobs:
           echo "🔍 Checking commits for DCO sign-off..."
           
           # Get commits in this PR
-          git log --format="%H %s" --no-merges origin/main..HEAD | while read commit message; do
+          git log --format="%H %s" --no-merges origin/master..HEAD | while read commit message; do
             if git show --format="%B" "$commit" | grep -q "Signed-off-by:"; then
               echo "✅ $commit: $message"
             else
