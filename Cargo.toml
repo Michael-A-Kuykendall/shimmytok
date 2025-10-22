@@ -18,3 +18,9 @@ regex = "1.10"
 [dev-dependencies]
 tempfile = "3.0"
 serde_json = "1.0"
+criterion = "0.5"
+dirs = "5.0"
+
+[[bench]]
+name = "tokenization"
+harness = false
