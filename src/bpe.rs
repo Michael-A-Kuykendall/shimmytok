@@ -25,44 +25,93 @@ const DEEPSEEK_CODER_PATTERN: &str = r"[\r\n]+|[\p{P}\p{S}\$]|'s|'t|'re|'ve|'m|'
 const FALCON_PATTERN: &str = r"\n| ?[\p{L}\p{N}]+| ?[^\s\p{L}\p{N}]+|\s+";
 
 /// MPT pattern
-const MPT_PATTERN: &str = r"\n| [^\S\n]+| ?[\p{L}\p{N}]+| ?[^\s\p{L}\p{N}]+";
+/// MPT pattern - Uses GPT-2 pattern (see get_pattern mapping)
 
-/// Starcoder pattern
-const STARCODER_PATTERN: &str = r"\n| [^\S\n]+| ?[\p{L}\p{N}]+| ?[^\s\p{L}\p{N}]+";
+/// Falcon pattern
 
-/// GPT-NeoX pattern
-const GPT_NEOX_PATTERN: &str = r"'s|'t|'re|'ve|'m|'ll|'d|\s+\S+|\s+|\S+";
+/// StarCoder pattern (also used by Refact, Command-R, SmolLM, Codeshell, Exaone, Minerva)
+const STARCODER_PATTERN: &str = r"\p{N}|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
 
-/// Bloom pattern
+/// Bloom pattern (also used by Poro, GPT3-Finnish)
 const BLOOM_PATTERN: &str = r"\s+|\S+";
 
 /// Qwen2 pattern
 const QWEN2_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
-/// ChatGLM pattern (multiple splits)
-const CHATGLM3_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+/// ChatGLM-4 pattern (glm4, chatglm-bpe)
 const CHATGLM4_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
-/// Vikhr pattern (Russian-focused)
-const VIKHR_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+/// DBRX pattern - Same as Llama-3
+const DBRX_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
-/// Jais pattern (Arabic-focused)
-const JAIS_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+/// Smaug pattern - Same as Llama-3
+const SMAUG_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
-/// Command-R pattern
-const COMMAND_R_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+/// Poro pattern (Finnish-focused) - Same as Bloom
+const PORO_PATTERN: &str = r" ?[^(\s|.,!?…。，、।۔،)]+";
 
-/// DBRX pattern
-const DBRX_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+/// DeepSeek-v3 pattern (NEW in 2025) 
+const DEEPSEEK_V3_PATTERN: &str = r"\p{N}{1,3}|[一-龥぀-ゟ゠-ヿ]+|[!#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~][A-Za-z]+|[^\r\n\p{L}\p{P}\p{S}]?[\p{L}\p{M}]+| ?[\p{P}\p{S}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
-/// Smaug pattern
-const SMAUG_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+/// Hunyuan-Dense pattern
+const HUNYUAN_DENSE_PATTERN: &str = r"\p{N}{1,3}|[一-龥぀-ゟ゠-ヿ]+|[!#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~][A-Za-z]+|[^\r\n\p{L}\p{P}\p{S}]?[\p{L}\p{M}]+| ?[\p{P}\p{S}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
-/// Poro pattern (Finnish-focused)
-const PORO_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+/// StableLM2 pattern - Same as Qwen2
+const STABLELM2_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
-/// Olmo pattern
-const OLMO_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+/// Hunyuan pattern - Same as Qwen2
+const HUNYUAN_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// Viking pattern (Norwegian)
+const VIKING_PATTERN: &str = r" ?[^(\s|.,!?…。，、।۔،)]+";
+
+/// GPT3-Finnish pattern - Same as Bloom
+const GPT3_FINNISH_PATTERN: &str = r" ?[^(\s|.,!?…。，、।۔،)]+";
+
+/// Refact pattern - Same as StarCoder
+const REFACT_PATTERN: &str = r"\p{N}|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
+
+/// SmolLM pattern - Same as StarCoder
+const SMOLLM_PATTERN: &str = r"\p{N}|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
+
+/// Codeshell pattern - Same as StarCoder
+const CODESHELL_PATTERN: &str = r"\p{N}|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
+
+/// Exaone pattern - Same as StarCoder
+const EXAONE_PATTERN: &str = r"\p{N}|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
+
+/// Minerva pattern - Same as StarCoder
+const MINERVA_PATTERN: &str = r"\p{N}|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
+
+/// Trillion pattern - Same as GPT-2
+const TRILLION_PATTERN: &str = r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
+
+/// Granite-Docling pattern - Same as GPT-2
+const GRANITE_DOCLING_PATTERN: &str = r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
+
+/// Tekken pattern (complex case-based tokenization)
+const TEKKEN_PATTERN: &str = r"[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))*((?=[\p{L}])([^A-Z]))+|[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))+((?=[\p{L}])([^A-Z]))*|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n/]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// Chameleon pattern (multi-modal with image tokens)
+const CHAMELEON_PATTERN: &str = r"<sentinel:[0-9]+>|(IMGIMG)((A|B|C|D|E|F|G|H|I){1,4})Z|([\t\n]|    |  )|\p{N}|[\p{P}!-/:-@\[-`{-~]|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
+
+/// GPT-4o pattern (OpenAI)
+const GPT4O_PATTERN: &str = r"[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))*((?=[\p{L}])([^A-Z]))+(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])?|[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))+((?=[\p{L}])([^A-Z]))*(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])?|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n/]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// KIMI-K2 pattern (Han character handling)
+const KIMI_K2_PATTERN: &str = r"\p{Han}+";
+
+/// SuperBPE pattern (number formatting)
+const SUPERBPE_PATTERN: &str = r"\p{N}+|(?=(\d{3})+(?!\d))";
+
+/// BailingMoe pattern
+const BAILINGMOE_PATTERN: &str = r"'(?:[sSdDmMtT]|[lL][lL]|[vV][eE]|[rR][eE])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s+";
+
+/// Seed-Coder pattern
+const SEED_CODER_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1}| ?[^\s\p{L}\p{N}\r\n]+|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// Grok-2 pattern (xAI)
+const GROK_2_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
 /// Symbol representing a text fragment during BPE merging
 #[derive(Debug, Clone)]
@@ -123,25 +172,53 @@ impl BPETokenizer {
     /// Get the appropriate regex pattern for a pre-tokenizer type
     fn get_pattern(pre_type: &str) -> &'static str {
         match pre_type {
-            "llama3" | "llama-bpe" | "llama-v3" => LLAMA3_PATTERN,
+            // Llama-3 family
+            "llama3" | "llama-bpe" | "llama-v3" | "falcon3" => LLAMA3_PATTERN,
+            
+            // DeepSeek family
             "deepseek-llm" => DEEPSEEK_LLM_PATTERN,
             "deepseek-coder" => DEEPSEEK_CODER_PATTERN,
+            "deepseek-v3" => DEEPSEEK_V3_PATTERN,
+            "deepseek-r1-qwen" => QWEN2_PATTERN,
+            
+            // Falcon
             "falcon" => FALCON_PATTERN,
-            "mpt" => MPT_PATTERN,
-            "starcoder" => STARCODER_PATTERN,
-            "gpt-neox" => GPT_NEOX_PATTERN,
-            "bloom" => BLOOM_PATTERN,
-            "qwen2" => QWEN2_PATTERN,
-            "chatglm3" => CHATGLM3_PATTERN,
-            "chatglm4" => CHATGLM4_PATTERN,
-            "vikhr" => VIKHR_PATTERN,
-            "jais" => JAIS_PATTERN,
-            "command-r" => COMMAND_R_PATTERN,
+            
+            // StarCoder family (many models use this)
+            "starcoder" | "refact" | "command-r" | "smollm" | "codeshell" | "exaone" | "minerva" => STARCODER_PATTERN,
+            
+            // GPT-2 family (most common, many aliases)
+            "gpt-2" | "phi-2" | "jina-es" | "jina-de" | "mpt" | "olmo" | "jais" | "trillion" | "granite-docling" | "exaone4" => GPT2_PATTERN,
+            
+            // Qwen2 family
+            "qwen2" | "stablelm2" | "hunyuan" | "megrez" => QWEN2_PATTERN,
+            
+            // Bloom family
+            "bloom" | "poro-chat" | "gpt3-finnish" => BLOOM_PATTERN,
+            
+            // ChatGLM
+            "chatglm4" | "glm4" | "chatglm-bpe" => CHATGLM4_PATTERN,
+            
+            // Same-as-Llama-3 patterns
             "dbrx" => DBRX_PATTERN,
-            "smaug" => SMAUG_PATTERN,
-            "poro" => PORO_PATTERN,
-            "olmo" => OLMO_PATTERN,
-            _ => GPT2_PATTERN, // Default
+            "smaug-bpe" => SMAUG_PATTERN,
+            
+            // Norwegian
+            "viking" => VIKING_PATTERN,
+            
+            // Advanced/Specialized
+            "tekken" => TEKKEN_PATTERN,
+            "chameleon" => CHAMELEON_PATTERN,
+            "gpt-4o" | "llama4" => GPT4O_PATTERN,
+            "kimi-k2" => KIMI_K2_PATTERN,
+            "superbpe" => SUPERBPE_PATTERN,
+            "bailingmoe" | "bailingmoe2" | "llada-moe" => BAILINGMOE_PATTERN,
+            "seed-coder" => SEED_CODER_PATTERN,
+            "hunyuan-dense" => HUNYUAN_DENSE_PATTERN,
+            "grok-2" => GROK_2_PATTERN,
+            
+            // Default (GPT-2)
+            _ => GPT2_PATTERN,
         }
     }
 
