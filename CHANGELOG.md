@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-10-22
+
+### Added
+- `decode_single()` method for streaming token-by-token decoding
+- `token_to_piece()` method to get raw token text
+- `token_type()` method to query token classification
+- `is_special_token()` method to check if token is special
+- Comprehensive streaming test suite (6 new tests)
+
+### Use Cases
+- Real-time streaming generation support
+- Token-level debugging and introspection
+- Efficient single-token decoding for LLM streaming
+
 ## [0.3.0] - 2025-10-22
 
 ### Added
@@ -75,7 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Security policy
 - DCO (Developer Certificate of Origin)
 
-[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Michael-A-Kuykendall/shimmytok/releases/tag/v0.1.0
