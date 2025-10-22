@@ -1,5 +1,6 @@
 /// Edge case tests for BPE tokenizer
 use shimmytok::Tokenizer;
+use std::path::Path;
 
 fn get_model_path() -> String {
     std::env::var("HOME")
@@ -10,7 +11,12 @@ fn get_model_path() -> String {
 
 #[test]
 fn test_empty_string() {
-    let tok = Tokenizer::from_gguf_file(&get_model_path()).expect("Failed to load tokenizer");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_empty_string: model not found at {}", model_path);
+        return;
+    }
+    let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let tokens = tok.encode("", false).expect("Failed to encode");
     assert_eq!(tokens, vec![], "Empty string should produce empty tokens");
@@ -21,7 +27,12 @@ fn test_empty_string() {
 
 #[test]
 fn test_single_char() {
-    let tok = Tokenizer::from_gguf_file(&get_model_path()).expect("Failed to load tokenizer");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_single_char: model not found at {}", model_path);
+        return;
+    }
+    let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let tokens = tok.encode("a", false).expect("Failed to encode");
     assert!(!tokens.is_empty(), "Single char should produce tokens");
@@ -32,7 +43,12 @@ fn test_single_char() {
 
 #[test]
 fn test_unicode_emoji() {
-    let tok = Tokenizer::from_gguf_file(&get_model_path()).expect("Failed to load tokenizer");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_unicode_emoji: model not found at {}", model_path);
+        return;
+    }
+    let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let text = "Hello 👋 World";
     let tokens = tok.encode(text, false).expect("Failed to encode");
@@ -45,7 +61,12 @@ fn test_unicode_emoji() {
 
 #[test]
 fn test_unicode_cjk() {
-    let tok = Tokenizer::from_gguf_file(&get_model_path()).expect("Failed to load tokenizer");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_unicode_cjk: model not found at {}", model_path);
+        return;
+    }
+    let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let text = "你好世界"; // "Hello World" in Chinese
     let tokens = tok.encode(text, false).expect("Failed to encode");
@@ -60,7 +81,12 @@ fn test_unicode_cjk() {
 
 #[test]
 fn test_special_chars() {
-    let tok = Tokenizer::from_gguf_file(&get_model_path()).expect("Failed to load tokenizer");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_special_chars: model not found at {}", model_path);
+        return;
+    }
+    let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let text = "!@#$%^&*()";
     let tokens = tok.encode(text, false).expect("Failed to encode");
@@ -72,7 +98,12 @@ fn test_special_chars() {
 
 #[test]
 fn test_long_string() {
-    let tok = Tokenizer::from_gguf_file(&get_model_path()).expect("Failed to load tokenizer");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_long_string: model not found at {}", model_path);
+        return;
+    }
+    let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     // Create 200-repetition string
     let text = "The quick brown fox jumps over the lazy dog. ".repeat(200);
@@ -87,7 +118,12 @@ fn test_long_string() {
 
 #[test]
 fn test_newlines_and_tabs() {
-    let tok = Tokenizer::from_gguf_file(&get_model_path()).expect("Failed to load tokenizer");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_newlines_and_tabs: model not found at {}", model_path);
+        return;
+    }
+    let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let text = "Line 1\nLine 2\tTabbed";
     let tokens = tok.encode(text, false).expect("Failed to encode");
@@ -99,7 +135,12 @@ fn test_newlines_and_tabs() {
 
 #[test]
 fn test_multiple_spaces() {
-    let tok = Tokenizer::from_gguf_file(&get_model_path()).expect("Failed to load tokenizer");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_multiple_spaces: model not found at {}", model_path);
+        return;
+    }
+    let tok = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let text = "Hello    world"; // 4 spaces
     let tokens = tok.encode(text, false).expect("Failed to encode");

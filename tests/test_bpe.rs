@@ -1,4 +1,5 @@
 use shimmytok::Tokenizer;
+use std::path::Path;
 
 fn get_model_path() -> String {
     std::env::var("HOME")
@@ -9,8 +10,14 @@ fn get_model_path() -> String {
 
 #[test]
 fn test_gpt2_tokenization() {
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_gpt2_tokenization: model not found at {}", model_path);
+        return;
+    }
+    
     let tokenizer =
-        Tokenizer::from_gguf_file(&get_model_path()).expect("Failed to load GPT-2 model");
+        Tokenizer::from_gguf_file(&model_path).expect("Failed to load GPT-2 model");
 
     println!("Vocab size: {}", tokenizer.vocab_size());
 

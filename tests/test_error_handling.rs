@@ -1,5 +1,6 @@
 // Negative tests - verify error handling actually works
 use shimmytok::{Error, Tokenizer};
+use std::path::Path;
 
 fn get_model_path() -> String {
     std::env::var("HOME")
@@ -10,7 +11,12 @@ fn get_model_path() -> String {
 
 #[test]
 fn test_invalid_token_id() {
-    let tokenizer = Tokenizer::from_gguf_file(get_model_path()).expect("Failed to load model");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_invalid_token_id: model not found at {}", model_path);
+        return;
+    }
+    let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
 
     // GPT-2 has ~50K tokens, so 999999 is invalid
     let invalid_tokens = vec![999999];
@@ -32,7 +38,12 @@ fn test_missing_file() {
 
 #[test]
 fn test_very_large_input() {
-    let tokenizer = Tokenizer::from_gguf_file(get_model_path()).expect("Failed to load model");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_very_large_input: model not found at {}", model_path);
+        return;
+    }
+    let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
 
     // Create 11MB input (exceeds MAX_INPUT_SIZE of 10MB)
     let large_text = "a".repeat(11 * 1024 * 1024);
@@ -54,7 +65,12 @@ fn test_very_large_input() {
 
 #[test]
 fn test_empty_input() {
-    let tokenizer = Tokenizer::from_gguf_file(get_model_path()).expect("Failed to load model");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_empty_input: model not found at {}", model_path);
+        return;
+    }
+    let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
 
     let tokens = tokenizer
         .encode("", false)
@@ -71,7 +87,12 @@ fn test_empty_input() {
 
 #[test]
 fn test_round_trip_fuzz() {
-    let tokenizer = Tokenizer::from_gguf_file(get_model_path()).expect("Failed to load model");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_round_trip_fuzz: model not found at {}", model_path);
+        return;
+    }
+    let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
 
     let test_strings = vec![
         "a",
@@ -115,7 +136,12 @@ fn test_round_trip_fuzz() {
 
 #[test]
 fn test_decode_with_special_tokens() {
-    let tokenizer = Tokenizer::from_gguf_file(get_model_path()).expect("Failed to load model");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_decode_with_special_tokens: model not found at {}", model_path);
+        return;
+    }
+    let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
 
     let text = "Hello world";
 
@@ -148,7 +174,12 @@ fn test_decode_with_special_tokens() {
 
 #[test]
 fn test_max_token_validation() {
-    let tokenizer = Tokenizer::from_gguf_file(get_model_path()).expect("Failed to load model");
+    let model_path = get_model_path();
+    if !Path::new(&model_path).exists() {
+        eprintln!("Skipping test_max_token_validation: model not found at {}", model_path);
+        return;
+    }
+    let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
 
     // Create input that would produce many tokens
     // Worst case: every character becomes a token
