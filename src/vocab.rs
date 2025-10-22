@@ -183,14 +183,17 @@ impl Vocabulary {
     }
 
     pub fn get_token_score(&self, id: TokenId) -> f32 {
-        self.scores.get(id as usize).copied().unwrap_or(0.0)
+        // scores length is validated to match tokens, so this is safe
+        self.scores.get(id as usize).copied()
+            .expect("Token ID should be valid - scores validated at load time")
     }
 
     pub fn get_token_type(&self, id: TokenId) -> TokenType {
+        // token_types length is validated to match tokens, so this is safe
         self.token_types
             .get(id as usize)
             .copied()
-            .unwrap_or(TokenType::Undefined)
+            .expect("Token ID should be valid - token_types validated at load time")
     }
 
     pub fn byte_to_token(&self, byte: u8) -> TokenId {

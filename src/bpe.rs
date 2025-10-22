@@ -258,12 +258,11 @@ impl BPETokenizer {
     /// Encode text to token IDs using BPE
     pub fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
         // Validate input size (Issue #10)
-        const MAX_INPUT_SIZE: usize = 10 * 1024 * 1024; // 10MB
-        if text.len() > MAX_INPUT_SIZE {
+        if text.len() > crate::MAX_INPUT_SIZE {
             return Err(crate::Error::TokenizationFailed(format!(
                 "Input text too large: {} bytes (max: {})",
                 text.len(),
-                MAX_INPUT_SIZE
+                crate::MAX_INPUT_SIZE
             )));
         }
 
@@ -276,15 +275,14 @@ impl BPETokenizer {
 
         // Apply BPE to each fragment
         let mut result = Vec::new();
-        const MAX_OUTPUT_TOKENS: usize = 1_000_000; // 1M tokens max (Issue #10)
         for fragment in fragments {
             let tokens = self.bpe_fragment(&fragment, vocab)?;
             // Check output size to prevent memory exhaustion
-            if result.len() + tokens.len() > MAX_OUTPUT_TOKENS {
+            if result.len() + tokens.len() > crate::MAX_OUTPUT_TOKENS {
                 return Err(crate::Error::TokenizationFailed(format!(
                     "Output would exceed max tokens: {} (max: {})",
                     result.len() + tokens.len(),
-                    MAX_OUTPUT_TOKENS
+                    crate::MAX_OUTPUT_TOKENS
                 )));
             }
             result.extend(tokens);
@@ -322,13 +320,6 @@ impl BPETokenizer {
                 decoded.len(),
                 MAX_DECODED_SIZE
             )));
-        }
-        
-        // Validate UTF-8 (decode_bytes uses lossy conversion, check if it's valid)
-        if !decoded.is_empty() && decoded.as_bytes().iter().any(|&b| b == 0xEF && decoded.contains('�')) {
-            return Err(crate::Error::TokenizationFailed(
-                "Decoded text contains invalid UTF-8 replacement characters".to_string()
-            ));
         }
 
         Ok(decoded)

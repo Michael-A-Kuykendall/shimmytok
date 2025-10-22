@@ -45,6 +45,12 @@ pub mod vocab;
 pub use vocab::{TokenType, Vocabulary};
 
 /// Token ID type used throughout the library
+/// Maximum input text size in bytes (10MB) - Issue R4#2
+pub const MAX_INPUT_SIZE: usize = 10 * 1024 * 1024;
+
+/// Maximum output tokens (1M tokens max) - prevents memory exhaustion
+pub const MAX_OUTPUT_TOKENS: usize = 1_000_000;
+
 /// Type alias for token IDs
 ///
 /// Token IDs are represented as u32 to match GGUF format and llama.cpp implementation.

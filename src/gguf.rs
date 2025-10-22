@@ -198,7 +198,16 @@ fn read_f32<R: Read>(reader: &mut R) -> Result<f32, Error> {
 fn read_string<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<String, Error> {
     const MAX_STRING_SIZE: usize = 1024 * 1024; // 1MB max per string
     const MAX_TOTAL_STRING_DATA: usize = 100 * 1024 * 1024; // 100MB total
-    let len = read_u64(reader)? as usize;
+    let len_u64 = read_u64(reader)?;
+    
+    // Prevent truncation on 32-bit systems (Issue R4#12)
+    if len_u64 > usize::MAX as u64 {
+        return Err(Error::InvalidMetadata(format!(
+            "String length {} exceeds platform limit",
+            len_u64
+        )));
+    }
+    let len = len_u64 as usize;
     
     if len > MAX_STRING_SIZE {
         return Err(Error::InvalidMetadata(format!(

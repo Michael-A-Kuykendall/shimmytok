@@ -76,12 +76,11 @@ impl SentencePieceTokenizer {
 impl TokenizerImpl for SentencePieceTokenizer {
     fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
         // Validate input size (Issue #10)
-        const MAX_INPUT_SIZE: usize = 10 * 1024 * 1024; // 10MB
-        if text.len() > MAX_INPUT_SIZE {
+        if text.len() > crate::MAX_INPUT_SIZE {
             return Err(crate::Error::TokenizationFailed(format!(
                 "Input text too large: {} bytes (max: {})",
                 text.len(),
-                MAX_INPUT_SIZE
+                crate::MAX_INPUT_SIZE
             )));
         }
 
@@ -97,11 +96,11 @@ impl TokenizerImpl for SentencePieceTokenizer {
         };
 
         // Validate processed size (Issue R3#10) - ▁ is 3 bytes UTF-8
-        if processed_text.len() > MAX_INPUT_SIZE {
+        if processed_text.len() > crate::MAX_INPUT_SIZE {
             return Err(crate::Error::TokenizationFailed(format!(
                 "Processed text too large: {} bytes (max: {})",
                 processed_text.len(),
-                MAX_INPUT_SIZE
+                crate::MAX_INPUT_SIZE
             )));
         }
 
@@ -220,7 +219,6 @@ impl TokenizerImpl for SentencePieceTokenizer {
 
         // Collect final tokens with resegment
         let mut result = Vec::new();
-        const MAX_OUTPUT_TOKENS: usize = 1_000_000; // 1M tokens max (Issue #10)
         let mut current = 0;
 
         // Find first symbol (the one with no prev)
@@ -250,11 +248,11 @@ impl TokenizerImpl for SentencePieceTokenizer {
                     0, // Initial depth
                 );
                 // Check output size after resegment
-                if result.len() > MAX_OUTPUT_TOKENS {
+                if result.len() > crate::MAX_OUTPUT_TOKENS {
                     return Err(crate::Error::TokenizationFailed(format!(
                         "Output would exceed max tokens: {} (max: {})",
                         result.len(),
-                        MAX_OUTPUT_TOKENS
+                        crate::MAX_OUTPUT_TOKENS
                     )));
                 }
             }
