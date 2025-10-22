@@ -192,7 +192,16 @@ fn read_f32<R: Read>(reader: &mut R) -> Result<f32, Error> {
 }
 
 fn read_string<R: Read>(reader: &mut R) -> Result<String, Error> {
+    const MAX_STRING_SIZE: usize = 1024 * 1024; // 1MB max
     let len = read_u64(reader)? as usize;
+    
+    if len > MAX_STRING_SIZE {
+        return Err(Error::InvalidMetadata(format!(
+            "String too large: {} bytes (max: {})",
+            len, MAX_STRING_SIZE
+        )));
+    }
+    
     let mut buf = vec![0u8; len];
     reader.read_exact(&mut buf)?;
     String::from_utf8(buf).map_err(|e| Error::InvalidMetadata(format!("Invalid UTF-8: {}", e)))

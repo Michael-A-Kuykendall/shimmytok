@@ -74,9 +74,19 @@ impl SentencePieceTokenizer {
 }
 
 impl TokenizerImpl for SentencePieceTokenizer {
-    fn encode(&self, text: &str, vocab: &Vocabulary) -> Vec<TokenId> {
+    fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
+        // Validate input size
+        const MAX_INPUT_SIZE: usize = 10 * 1024 * 1024; // 10MB
+        if text.len() > MAX_INPUT_SIZE {
+            return Err(crate::Error::TokenizationFailed(format!(
+                "Input text too large: {} bytes (max: {})",
+                text.len(),
+                MAX_INPUT_SIZE
+            )));
+        }
+
         if text.is_empty() {
-            return Vec::new();
+            return Ok(Vec::new());
         }
 
         // Add space prefix for SentencePiece (replacing spaces with ▁)
@@ -133,7 +143,17 @@ impl TokenizerImpl for SentencePieceTokenizer {
         }
 
         // Process merges in priority order
+        // Add iteration limit to prevent infinite loops
+        let max_iterations = 10 * symbols.len().max(1);
+        let mut iterations = 0;
         while let Some(bigram) = work_queue.pop() {
+            iterations += 1;
+            if iterations > max_iterations {
+                return Err(crate::Error::TokenizationFailed(
+                    "SentencePiece merge iteration limit exceeded".to_string()
+                ));
+            }
+            
             if bigram.left >= symbols.len() || bigram.right >= symbols.len() {
                 continue;
             }
@@ -224,10 +244,20 @@ impl TokenizerImpl for SentencePieceTokenizer {
             }
         }
 
-        result
+        Ok(result)
     }
 
-    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> String {
+    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, crate::Error> {
+        // Validate all tokens exist
+        for &token_id in tokens {
+            if vocab.get_token_text(token_id).is_none() {
+                return Err(crate::Error::InvalidToken(format!(
+                    "Token ID {} not found in vocabulary",
+                    token_id
+                )));
+            }
+        }
+
         let mut result = String::new();
 
         for &token_id in tokens {
@@ -237,7 +267,7 @@ impl TokenizerImpl for SentencePieceTokenizer {
         }
 
         // Replace sentencepiece meta-symbol
-        result.replace('▁', " ")
+        Ok(result.replace('▁', " "))
     }
 }
 

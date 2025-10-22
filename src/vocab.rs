@@ -60,13 +60,46 @@ impl Vocabulary {
     pub fn from_gguf_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let metadata = crate::gguf::load_metadata(path)?;
 
+        const MAX_VOCAB_SIZE: usize = 1_000_000; // 1M tokens max
+        const MAX_TOKEN_LENGTH: usize = 1024; // 1KB per token max
+
         let num_tokens = metadata.tokens.len();
+        
+        // Validate vocab size
+        if num_tokens == 0 {
+            return Err(Error::VocabularyError("Vocabulary is empty".to_string()));
+        }
+        if num_tokens > MAX_VOCAB_SIZE {
+            return Err(Error::VocabularyError(format!(
+                "Vocabulary too large: {} tokens (max: {})",
+                num_tokens, MAX_VOCAB_SIZE
+            )));
+        }
+
+        // Validate token lengths
+        for (i, token) in metadata.tokens.iter().enumerate() {
+            if token.len() > MAX_TOKEN_LENGTH {
+                return Err(Error::VocabularyError(format!(
+                    "Token {} too large: {} bytes (max: {})",
+                    i, token.len(), MAX_TOKEN_LENGTH
+                )));
+            }
+        }
+
         let token_to_id: HashMap<String, TokenId> = metadata
             .tokens
             .iter()
             .enumerate()
             .map(|(i, s)| (s.clone(), i as TokenId))
             .collect();
+        
+        // Validate no duplicate tokens
+        if token_to_id.len() != num_tokens {
+            return Err(Error::VocabularyError(format!(
+                "Duplicate tokens found: {} unique out of {} total",
+                token_to_id.len(), num_tokens
+            )));
+        }
 
         Ok(Self {
             tokens: metadata.tokens,

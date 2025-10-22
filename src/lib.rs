@@ -70,8 +70,8 @@ pub struct Tokenizer {
 }
 
 trait TokenizerImpl {
-    fn encode(&self, text: &str, vocab: &Vocabulary) -> Vec<TokenId>;
-    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> String;
+    fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, Error>;
+    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error>;
 }
 
 impl Tokenizer {
@@ -141,7 +141,8 @@ impl Tokenizer {
             tokens.push(self.vocab.bos_token_id());
         }
 
-        tokens.extend(self.tokenizer_impl.encode(text, &self.vocab));
+        let encoded = self.tokenizer_impl.encode(text, &self.vocab)?;
+        tokens.extend(encoded);
 
         if add_special_tokens && self.vocab.add_eos_token() {
             tokens.push(self.vocab.eos_token_id());
@@ -185,7 +186,7 @@ impl Tokenizer {
             tokens.to_vec()
         };
 
-        Ok(self.tokenizer_impl.decode(&filtered_tokens, &self.vocab))
+        self.tokenizer_impl.decode(&filtered_tokens, &self.vocab)
     }
 
     /// Get the vocabulary size
@@ -229,6 +230,12 @@ pub enum Error {
 
     #[error("Tokenization failed: {0}")]
     TokenizationFailed(String),
+
+    #[error("Invalid token: {0}")]
+    InvalidToken(String),
+
+    #[error("Vocabulary error: {0}")]
+    VocabularyError(String),
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),

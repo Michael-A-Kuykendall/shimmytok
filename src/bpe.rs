@@ -104,7 +104,7 @@ impl BPETokenizer {
 
     /// Apply BPE to a single text fragment
     /// Direct port of llama.cpp llm_tokenizer_bpe_session::tokenize
-    fn bpe_fragment(&self, text: &str, vocab: &Vocabulary) -> Vec<TokenId> {
+    fn bpe_fragment(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
         // Text is a single word from regex pre-tokenization
         // llama.cpp initializes with UTF-8 characters as symbols
 
@@ -140,7 +140,7 @@ impl BPETokenizer {
         }
 
         if symbols.is_empty() {
-            return Vec::new();
+            return Ok(Vec::new());
         }
 
         // Build initial work queue with all adjacent bigrams
@@ -223,7 +223,7 @@ impl BPETokenizer {
             }
         }
 
-        result
+        Ok(result)
     }
 
     /// Try to add a bigram to the work queue if it's a valid merge
@@ -256,27 +256,46 @@ impl BPETokenizer {
     }
 
     /// Encode text to token IDs using BPE
-    pub fn encode(&self, text: &str, vocab: &Vocabulary) -> Vec<TokenId> {
+    pub fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
+        // Validate input size
+        const MAX_INPUT_SIZE: usize = 10 * 1024 * 1024; // 10MB
+        if text.len() > MAX_INPUT_SIZE {
+            return Err(crate::Error::TokenizationFailed(format!(
+                "Input text too large: {} bytes (max: {})",
+                text.len(),
+                MAX_INPUT_SIZE
+            )));
+        }
+
         // GPT-2 byte-level BPE: convert text bytes to unicode using GPT-2's byte encoder
         let text_encoded = crate::byte_encoder::encode_bytes(text);
 
         // Pre-tokenize text into fragments
-        let fragments = self.pre_tokenize(&text_encoded, vocab).expect(
-            "BPE pre-tokenization regex failed - this should never happen with hardcoded patterns",
-        );
+        let fragments = self.pre_tokenize(&text_encoded, vocab)
+            .map_err(|e| crate::Error::TokenizationFailed(format!("Pre-tokenization failed: {}", e)))?;
 
         // Apply BPE to each fragment
         let mut result = Vec::new();
         for fragment in fragments {
-            let tokens = self.bpe_fragment(&fragment, vocab);
+            let tokens = self.bpe_fragment(&fragment, vocab)?;
             result.extend(tokens);
         }
 
-        result
+        Ok(result)
     }
 
     /// Decode token IDs back to text
-    pub fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> String {
+    pub fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, crate::Error> {
+        // Validate all token IDs exist
+        for &id in tokens {
+            if vocab.get_token_text(id).is_none() {
+                return Err(crate::Error::InvalidToken(format!(
+                    "Token ID {} not found in vocabulary",
+                    id
+                )));
+            }
+        }
+
         let byte_encoded_text: String = tokens
             .iter()
             .filter_map(|&id| vocab.get_token_text(id))
@@ -284,16 +303,25 @@ impl BPETokenizer {
             .join("");
 
         // Convert from GPT-2 byte encoding back to normal UTF-8
-        crate::byte_encoder::decode_bytes(&byte_encoded_text)
+        let decoded = crate::byte_encoder::decode_bytes(&byte_encoded_text);
+        
+        // Validate UTF-8 (decode_bytes uses lossy conversion, check if it's valid)
+        if !decoded.is_empty() && decoded.as_bytes().iter().any(|&b| b == 0xEF && decoded.contains('�')) {
+            return Err(crate::Error::TokenizationFailed(
+                "Decoded text contains invalid UTF-8 replacement characters".to_string()
+            ));
+        }
+
+        Ok(decoded)
     }
 }
 
 impl crate::TokenizerImpl for BPETokenizer {
-    fn encode(&self, text: &str, vocab: &Vocabulary) -> Vec<TokenId> {
+    fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
         BPETokenizer::encode(self, text, vocab)
     }
 
-    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> String {
+    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, crate::Error> {
         BPETokenizer::decode(self, tokens, vocab)
     }
 }
