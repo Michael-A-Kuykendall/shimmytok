@@ -5,15 +5,64 @@ use crate::vocab::Vocabulary;
 use crate::TokenId;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
-use std::sync::OnceLock;
 
-/// GPT-2 pre-tokenization regex pattern
-/// Note: Simplified from original to work with Rust regex (no lookahead support)
+// Pre-tokenization regex patterns from llama.cpp
+// Reference: https://github.com/ggerganov/llama.cpp/blob/master/common/common.cpp
+
+/// GPT-2 pattern (default BPE)
 const GPT2_PATTERN: &str = r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+";
 
-/// Llama-3 pre-tokenization regex pattern
-/// Note: Simplified version - Rust regex doesn't support negative lookahead (?!\S)
-const LLAMA3_PATTERN: &str = r"'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD]|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+";
+/// Llama-3 BPE pattern
+const LLAMA3_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// DeepSeek LLM pattern
+const DEEPSEEK_LLM_PATTERN: &str = r"[\r\n]+|[\p{P}\p{S}]|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+";
+
+/// DeepSeek Coder pattern  
+const DEEPSEEK_CODER_PATTERN: &str = r"[\r\n]+|[\p{P}\p{S}\$]|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+";
+
+/// Falcon pattern
+const FALCON_PATTERN: &str = r"\n| ?[\p{L}\p{N}]+| ?[^\s\p{L}\p{N}]+|\s+";
+
+/// MPT pattern
+const MPT_PATTERN: &str = r"\n| [^\S\n]+| ?[\p{L}\p{N}]+| ?[^\s\p{L}\p{N}]+";
+
+/// Starcoder pattern
+const STARCODER_PATTERN: &str = r"\n| [^\S\n]+| ?[\p{L}\p{N}]+| ?[^\s\p{L}\p{N}]+";
+
+/// GPT-NeoX pattern
+const GPT_NEOX_PATTERN: &str = r"'s|'t|'re|'ve|'m|'ll|'d|\s+\S+|\s+|\S+";
+
+/// Bloom pattern
+const BLOOM_PATTERN: &str = r"\s+|\S+";
+
+/// Qwen2 pattern
+const QWEN2_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// ChatGLM pattern (multiple splits)
+const CHATGLM3_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+const CHATGLM4_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// Vikhr pattern (Russian-focused)
+const VIKHR_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// Jais pattern (Arabic-focused)
+const JAIS_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// Command-R pattern
+const COMMAND_R_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// DBRX pattern
+const DBRX_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// Smaug pattern
+const SMAUG_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// Poro pattern (Finnish-focused)
+const PORO_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
+
+/// Olmo pattern
+const OLMO_PATTERN: &str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
 /// Symbol representing a text fragment during BPE merging
 #[derive(Debug, Clone)]
@@ -54,15 +103,14 @@ impl PartialOrd for Bigram {
 }
 
 pub struct BPETokenizer {
-    gpt2_regex: OnceLock<regex::Regex>,
-    llama3_regex: OnceLock<regex::Regex>,
+    // Lazily compiled regex patterns
+    regex_cache: std::sync::Mutex<HashMap<String, regex::Regex>>,
 }
 
 impl Default for BPETokenizer {
     fn default() -> Self {
         BPETokenizer {
-            gpt2_regex: OnceLock::new(),
-            llama3_regex: OnceLock::new(),
+            regex_cache: std::sync::Mutex::new(HashMap::new()),
         }
     }
 }
@@ -72,23 +120,48 @@ impl BPETokenizer {
         Self::default()
     }
 
-    /// Get or compile the pre-tokenization regex
-    fn get_regex(&self, pre_type: &str) -> Result<&regex::Regex, String> {
+    /// Get the appropriate regex pattern for a pre-tokenizer type
+    fn get_pattern(pre_type: &str) -> &'static str {
         match pre_type {
-            "llama3" | "llama-bpe" => {
-                self.llama3_regex.get_or_init(|| {
-                    regex::Regex::new(LLAMA3_PATTERN).expect("Llama-3 regex pattern is invalid")
-                });
-                Ok(self.llama3_regex.get().unwrap())
-            }
-            _ => {
-                // Default to GPT-2
-                self.gpt2_regex.get_or_init(|| {
-                    regex::Regex::new(GPT2_PATTERN).expect("GPT-2 regex pattern is invalid")
-                });
-                Ok(self.gpt2_regex.get().unwrap())
-            }
+            "llama3" | "llama-bpe" | "llama-v3" => LLAMA3_PATTERN,
+            "deepseek-llm" => DEEPSEEK_LLM_PATTERN,
+            "deepseek-coder" => DEEPSEEK_CODER_PATTERN,
+            "falcon" => FALCON_PATTERN,
+            "mpt" => MPT_PATTERN,
+            "starcoder" => STARCODER_PATTERN,
+            "gpt-neox" => GPT_NEOX_PATTERN,
+            "bloom" => BLOOM_PATTERN,
+            "qwen2" => QWEN2_PATTERN,
+            "chatglm3" => CHATGLM3_PATTERN,
+            "chatglm4" => CHATGLM4_PATTERN,
+            "vikhr" => VIKHR_PATTERN,
+            "jais" => JAIS_PATTERN,
+            "command-r" => COMMAND_R_PATTERN,
+            "dbrx" => DBRX_PATTERN,
+            "smaug" => SMAUG_PATTERN,
+            "poro" => PORO_PATTERN,
+            "olmo" => OLMO_PATTERN,
+            _ => GPT2_PATTERN, // Default
         }
+    }
+
+    /// Get or compile the pre-tokenization regex
+    fn get_regex(&self, pre_type: &str) -> Result<regex::Regex, String> {
+        let mut cache = self
+            .regex_cache
+            .lock()
+            .map_err(|e| format!("Mutex lock failed: {}", e))?;
+
+        if let Some(regex) = cache.get(pre_type) {
+            return Ok(regex.clone());
+        }
+
+        let pattern = Self::get_pattern(pre_type);
+        let regex = regex::Regex::new(pattern)
+            .map_err(|e| format!("Failed to compile regex for '{}': {}", pre_type, e))?;
+
+        cache.insert(pre_type.to_string(), regex.clone());
+        Ok(regex)
     }
 
     /// Pre-tokenize text using regex patterns

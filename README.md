@@ -69,14 +69,25 @@ let text = tokenizer.decode(&tokens, true)?;  // Strips BOS/EOS from output
 
 ## Supported Models
 
-| Model Type | Status | Implementation |
-|------------|--------|----------------|
-| LLaMA/Llama-2/Llama-3 | ✅ Full support | SentencePiece (validated) |
-| Mistral | ✅ Full support | SentencePiece (validated) |
-| Phi-3 | ✅ Full support | SentencePiece (validated) |
-| Qwen/Qwen2 | ✅ Full support | BPE (validated) |
-| Gemma | ✅ Full support | SentencePiece (validated) |
-| GPT-2 / GPT-3 (BPE) | ✅ Full support | Priority queue BPE |
+| Model Type | Status | Implementation | Patterns |
+|------------|--------|----------------|----------|
+| LLaMA/Llama-2/Llama-3 | ✅ Full support | SentencePiece (validated) | N/A |
+| Mistral | ✅ Full support | SentencePiece (validated) | N/A |
+| Phi-3 | ✅ Full support | SentencePiece (validated) | N/A |
+| Qwen/Qwen2 | ✅ Full support | BPE (20 patterns) | qwen2 |
+| Gemma | ✅ Full support | SentencePiece (validated) | N/A |
+| GPT-2 / GPT-3 | ✅ Tested | Priority queue BPE | gpt2 (default) |
+| Falcon | ✅ Implemented | BPE | falcon |
+| MPT | ✅ Implemented | BPE | mpt |
+| StarCoder | ✅ Implemented | BPE | starcoder |
+| GPT-NeoX | ✅ Implemented | BPE | gpt-neox |
+| BLOOM | ✅ Implemented | BPE | bloom |
+| DeepSeek | ✅ Implemented | BPE | deepseek-llm, deepseek-coder |
+| ChatGLM | ✅ Implemented | BPE | chatglm3, chatglm4 |
+| Command-R | ✅ Implemented | BPE | command-r |
+| DBRX | ✅ Implemented | BPE | dbrx |
+
+**Total**: 20 BPE pre-tokenizer patterns implemented. See [BPE_PATTERNS.md](BPE_PATTERNS.md) for complete list.
 
 ## Validation
 
