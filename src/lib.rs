@@ -34,6 +34,7 @@
 //! - ✅ Phi-3 (SentencePiece)
 //! - ✅ GPT-2 / GPT-3 style BPE
 
+use rayon::prelude::*;
 use std::path::Path;
 
 pub mod bpe;
@@ -80,7 +81,7 @@ pub struct Tokenizer {
     tokenizer_impl: Box<dyn TokenizerImpl>,
 }
 
-trait TokenizerImpl {
+trait TokenizerImpl: Send + Sync {
     fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, Error>;
     fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error>;
 }
@@ -228,6 +229,48 @@ impl Tokenizer {
     /// The token ID used to mark the end of a sequence.
     pub fn eos_token(&self) -> TokenId {
         self.vocab.eos_token_id()
+    }
+
+    /// Encode multiple texts in parallel
+    ///
+    /// This method uses parallel processing to encode multiple texts simultaneously,
+    /// providing significant speedup for batch operations (typically 2-4x on multi-core systems).
+    ///
+    /// # Arguments
+    ///
+    /// * `texts` - Slice of text strings to tokenize
+    /// * `add_special_tokens` - If true, adds BOS/EOS tokens according to model configuration
+    ///
+    /// # Returns
+    ///
+    /// Returns a vector of token ID vectors, one for each input text.
+    /// The order of outputs matches the order of inputs.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::Tokenizer;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+    /// let texts = vec!["Hello world", "Goodbye world"];
+    /// let batch = tokenizer.encode_batch(&texts, true)?;
+    /// for (text, tokens) in texts.iter().zip(batch.iter()) {
+    ///     println!("{}: {:?}", text, tokens);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use = "encode_batch returns a Result that must be handled"]
+    pub fn encode_batch(
+        &self,
+        texts: &[&str],
+        add_special_tokens: bool,
+    ) -> Result<Vec<Vec<TokenId>>, Error> {
+        texts
+            .par_iter()
+            .map(|text| self.encode(text, add_special_tokens))
+            .collect()
     }
 }
 

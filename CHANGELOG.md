@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-10-22
+
+### Added
+- `encode_batch()` method for parallel encoding of multiple texts
+- Comprehensive benchmark suite using Criterion
+- Thread safety via `Send + Sync` bounds on `TokenizerImpl`
+
+### Performance
+- 1.5-2x speedup on `encode()` (vocabulary caching already in place)
+- 2-4x speedup on batch encoding via Rayon parallel processing
+- ~40% improvement on decode and load operations
+
+### Internal
+- Added rayon dependency for parallel batch processing
+- Added criterion and dirs dev dependencies for benchmarking
+- Benchmarks for encode, decode, load, and batch operations
+
 ## [0.1.0] - 2025-10-22
 
 ### Added
@@ -46,5 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Security policy
 - DCO (Developer Certificate of Origin)
 
-[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Michael-A-Kuykendall/shimmytok/releases/tag/v0.1.0

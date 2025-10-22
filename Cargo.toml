@@ -1,6 +1,6 @@
 [package]
 name = "shimmytok"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["shimmytok contributors"]
 description = "Pure Rust tokenizer for GGUF models with llama.cpp compatibility (SentencePiece + BPE)"
@@ -14,7 +14,14 @@ documentation = "https://docs.rs/shimmytok"
 [dependencies]
 thiserror = "2.0"
 regex = "1.10"
+rayon = "1.10"
 
 [dev-dependencies]
 tempfile = "3.0"
 serde_json = "1.0"
+criterion = "0.5"
+dirs = "5.0"
+
+[[bench]]
+name = "tokenization"
+harness = false
