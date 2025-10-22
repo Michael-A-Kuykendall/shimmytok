@@ -36,9 +36,10 @@ pub fn load_metadata<P: AsRef<Path>>(path: P) -> Result<GGUFMetadata, Error> {
 
     // Read version
     let version = read_u32(&mut reader)?;
+    // Support both version 2 and 3 (GPT-2 uses v3)
     if !(2..=3).contains(&version) {
         return Err(Error::InvalidMetadata(format!(
-            "Unsupported GGUF version: {}",
+            "Unsupported GGUF version: {} (only versions 2-3 are supported)",
             version
         )));
     }

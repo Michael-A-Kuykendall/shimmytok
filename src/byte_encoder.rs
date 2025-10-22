@@ -57,7 +57,8 @@ pub fn encode_bytes(text: &str) -> String {
         .collect()
 }
 
-/// Decode GPT-2 unicode representation back to bytes
+/// Decode GPT-2 byte-encoded text back to a regular string.
+/// Note: For very large inputs (>100MB), consider streaming to avoid memory spikes.
 pub fn decode_bytes(text: &str) -> String {
     let byte_decoder = unicode_to_bytes();
     let bytes: Vec<u8> = text

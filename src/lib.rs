@@ -96,6 +96,7 @@ impl Tokenizer {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use = "from_gguf_file returns a Result that must be handled"]
     pub fn from_gguf_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let vocab = Vocabulary::from_gguf_file(path)?;
 
@@ -134,6 +135,7 @@ impl Tokenizer {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use = "encode returns a Result that must be handled"]
     pub fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<TokenId>, Error> {
         let mut tokens = Vec::new();
 
@@ -175,6 +177,7 @@ impl Tokenizer {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use = "decode returns a Result that must be handled"]
     pub fn decode(&self, tokens: &[TokenId], skip_special_tokens: bool) -> Result<String, Error> {
         let filtered_tokens = if skip_special_tokens {
             tokens

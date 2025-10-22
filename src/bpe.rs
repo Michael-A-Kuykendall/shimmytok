@@ -257,7 +257,7 @@ impl BPETokenizer {
 
     /// Encode text to token IDs using BPE
     pub fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
-        // Validate input size
+        // Validate input size (Issue #10)
         const MAX_INPUT_SIZE: usize = 10 * 1024 * 1024; // 10MB
         if text.len() > MAX_INPUT_SIZE {
             return Err(crate::Error::TokenizationFailed(format!(
@@ -276,8 +276,17 @@ impl BPETokenizer {
 
         // Apply BPE to each fragment
         let mut result = Vec::new();
+        const MAX_OUTPUT_TOKENS: usize = 1_000_000; // 1M tokens max (Issue #10)
         for fragment in fragments {
             let tokens = self.bpe_fragment(&fragment, vocab)?;
+            // Check output size to prevent memory exhaustion
+            if result.len() + tokens.len() > MAX_OUTPUT_TOKENS {
+                return Err(crate::Error::TokenizationFailed(format!(
+                    "Output would exceed max tokens: {} (max: {})",
+                    result.len() + tokens.len(),
+                    MAX_OUTPUT_TOKENS
+                )));
+            }
             result.extend(tokens);
         }
 
@@ -301,6 +310,16 @@ impl BPETokenizer {
             .filter_map(|&id| vocab.get_token_text(id))
             .collect::<Vec<_>>()
             .join("");
+
+        // Validate output size (Issue #10)
+        const MAX_DECODE_SIZE: usize = 100 * 1024 * 1024; // 100MB
+        if byte_encoded_text.len() > MAX_DECODE_SIZE {
+            return Err(crate::Error::TokenizationFailed(format!(
+                "Decoded text too large: {} bytes (max: {})",
+                byte_encoded_text.len(),
+                MAX_DECODE_SIZE
+            )));
+        }
 
         // Convert from GPT-2 byte encoding back to normal UTF-8
         let decoded = crate::byte_encoder::decode_bytes(&byte_encoded_text);

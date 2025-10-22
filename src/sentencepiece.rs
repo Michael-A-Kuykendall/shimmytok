@@ -75,7 +75,7 @@ impl SentencePieceTokenizer {
 
 impl TokenizerImpl for SentencePieceTokenizer {
     fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
-        // Validate input size
+        // Validate input size (Issue #10)
         const MAX_INPUT_SIZE: usize = 10 * 1024 * 1024; // 10MB
         if text.len() > MAX_INPUT_SIZE {
             return Err(crate::Error::TokenizationFailed(format!(
@@ -208,6 +208,7 @@ impl TokenizerImpl for SentencePieceTokenizer {
 
         // Collect final tokens with resegment
         let mut result = Vec::new();
+        const MAX_OUTPUT_TOKENS: usize = 1_000_000; // 1M tokens max (Issue #10)
         let mut current = 0;
 
         // Find first symbol (the one with no prev)
@@ -235,6 +236,14 @@ impl TokenizerImpl for SentencePieceTokenizer {
                     vocab,
                     &mut result,
                 );
+                // Check output size after resegment
+                if result.len() > MAX_OUTPUT_TOKENS {
+                    return Err(crate::Error::TokenizationFailed(format!(
+                        "Output would exceed max tokens: {} (max: {})",
+                        result.len(),
+                        MAX_OUTPUT_TOKENS
+                    )));
+                }
             }
 
             if let Some(next) = symbol.next {
@@ -259,9 +268,18 @@ impl TokenizerImpl for SentencePieceTokenizer {
         }
 
         let mut result = String::new();
+        const MAX_DECODE_SIZE: usize = 100 * 1024 * 1024; // 100MB (Issue #10)
 
         for &token_id in tokens {
             if let Some(text) = vocab.get_token_text(token_id) {
+                // Check size before growing
+                if result.len() + text.len() > MAX_DECODE_SIZE {
+                    return Err(crate::Error::TokenizationFailed(format!(
+                        "Decoded text would exceed max size: {} bytes (max: {})",
+                        result.len() + text.len(),
+                        MAX_DECODE_SIZE
+                    )));
+                }
                 result.push_str(text);
             }
         }

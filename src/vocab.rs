@@ -86,12 +86,11 @@ impl Vocabulary {
             }
         }
 
-        let token_to_id: HashMap<String, TokenId> = metadata
-            .tokens
-            .iter()
-            .enumerate()
-            .map(|(i, s)| (s.clone(), i as TokenId))
-            .collect();
+        // Build token_to_id with capacity hint (Issue #8)
+        let mut token_to_id = HashMap::with_capacity(num_tokens);
+        for (i, s) in metadata.tokens.iter().enumerate() {
+            token_to_id.insert(s.clone(), i as TokenId);
+        }
         
         // Validate no duplicate tokens
         if token_to_id.len() != num_tokens {
@@ -99,6 +98,24 @@ impl Vocabulary {
                 "Duplicate tokens found: {} unique out of {} total",
                 token_to_id.len(), num_tokens
             )));
+        }
+
+        // Validate merge rules reference valid tokens (Issue #12)
+        if let Some(ref merges) = metadata.merges {
+            for (rank, (left, right)) in merges.iter().enumerate() {
+                if !token_to_id.contains_key(left) {
+                    return Err(Error::VocabularyError(format!(
+                        "Merge rule {} references unknown left token: '{}'",
+                        rank, left
+                    )));
+                }
+                if !token_to_id.contains_key(right) {
+                    return Err(Error::VocabularyError(format!(
+                        "Merge rule {} references unknown right token: '{}'",
+                        rank, right
+                    )));
+                }
+            }
         }
 
         Ok(Self {
