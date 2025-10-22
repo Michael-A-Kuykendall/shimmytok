@@ -72,8 +72,11 @@ let text = tokenizer.decode(&tokens, true)?;  // Strips BOS/EOS from output
 | Model Type | Status | Implementation |
 |------------|--------|----------------|
 | LLaMA/Llama-2/Llama-3 | ✅ Full support | SentencePiece (validated) |
+| Mistral | ✅ Full support | SentencePiece (validated) |
 | Phi-3 | ✅ Full support | SentencePiece (validated) |
-| GPT-2 / GPT-3 (BPE) | ✅ Full support | Priority queue BPE from llama.cpp |
+| Qwen/Qwen2 | ✅ Full support | BPE (validated) |
+| Gemma | ✅ Full support | SentencePiece (validated) |
+| GPT-2 / GPT-3 (BPE) | ✅ Full support | Priority queue BPE |
 
 ## Validation
 
