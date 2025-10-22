@@ -270,8 +270,9 @@ impl BPETokenizer {
         let text_encoded = crate::byte_encoder::encode_bytes(text);
 
         // Pre-tokenize text into fragments
-        let fragments = self.pre_tokenize(&text_encoded, vocab)
-            .map_err(|e| crate::Error::TokenizationFailed(format!("Pre-tokenization failed: {}", e)))?;
+        let fragments = self.pre_tokenize(&text_encoded, vocab).map_err(|e| {
+            crate::Error::TokenizationFailed(format!("Pre-tokenization failed: {}", e))
+        })?;
 
         // Apply BPE to each fragment
         let mut result = Vec::new();

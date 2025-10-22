@@ -199,7 +199,7 @@ fn read_string<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Strin
     const MAX_STRING_SIZE: usize = 1024 * 1024; // 1MB max per string
     const MAX_TOTAL_STRING_DATA: usize = 100 * 1024 * 1024; // 100MB total
     let len_u64 = read_u64(reader)?;
-    
+
     // Prevent truncation on 32-bit systems (Issue R4#12)
     if len_u64 > usize::MAX as u64 {
         return Err(Error::InvalidMetadata(format!(
@@ -208,7 +208,7 @@ fn read_string<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Strin
         )));
     }
     let len = len_u64 as usize;
-    
+
     if len > MAX_STRING_SIZE {
         return Err(Error::InvalidMetadata(format!(
             "String too large: {} bytes (max: {})",
@@ -217,17 +217,16 @@ fn read_string<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Strin
     }
 
     // Check total allocation with overflow protection (Issue R3#2)
-    *total_bytes = total_bytes.checked_add(len)
-        .ok_or_else(|| Error::InvalidMetadata(
-            "Total string data overflow".to_string()
-        ))?;
+    *total_bytes = total_bytes
+        .checked_add(len)
+        .ok_or_else(|| Error::InvalidMetadata("Total string data overflow".to_string()))?;
     if *total_bytes > MAX_TOTAL_STRING_DATA {
         return Err(Error::InvalidMetadata(format!(
             "Total string data too large: {} bytes (max: {})",
             *total_bytes, MAX_TOTAL_STRING_DATA
         )));
     }
-    
+
     let mut buf = vec![0u8; len];
     reader.read_exact(&mut buf)?;
     String::from_utf8(buf).map_err(|e| Error::InvalidMetadata(format!("Invalid UTF-8: {}", e)))

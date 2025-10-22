@@ -1,0 +1,154 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  preflight:
+    name: Release Preflight Checks
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.gates.outputs.should_publish }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-release-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: "Gate 1: Code Formatting"
+        run: |
+          echo "🎨 Gate 1: Checking code formatting"
+          cargo fmt -- --check
+          echo "✅ Gate 1 PASSED"
+
+      - name: "Gate 2: Clippy Lints"
+        run: |
+          echo "🔍 Gate 2: Running clippy lints"
+          cargo clippy -- -D warnings
+          echo "✅ Gate 2 PASSED"
+
+      - name: "Gate 3: Test Suite"
+        run: |
+          echo "🧪 Gate 3: Running test suite"
+          cargo test --verbose
+          echo "✅ Gate 3 PASSED"
+
+      - name: "Gate 4: Build Verification"
+        run: |
+          echo "🔨 Gate 4: Building release binary"
+          cargo build --release --verbose
+          echo "✅ Gate 4 PASSED"
+
+      - name: "Gate 5: crates.io Dry Run"
+        run: |
+          echo "📦 Gate 5: Testing crates.io publication readiness"
+          
+          # Handle uncommitted Cargo.lock
+          if git status --porcelain | grep -q "Cargo.lock"; then
+            echo "⚠️ Cargo.lock has uncommitted changes (using --allow-dirty)"
+            DIRTY_FLAG="--allow-dirty"
+          else
+            echo "✅ No uncommitted changes detected"
+            DIRTY_FLAG=""
+          fi
+          
+          # Dry-run validation
+          cargo publish --dry-run $DIRTY_FLAG
+          echo "✅ Gate 5 PASSED"
+
+      - name: "Release Gates Summary"
+        id: gates
+        run: |
+          echo "🎉 ALL 5 RELEASE GATES PASSED!"
+          echo "✅ Gate 1: Code Formatting"
+          echo "✅ Gate 2: Clippy Lints"
+          echo "✅ Gate 3: Test Suite"
+          echo "✅ Gate 4: Build Verification"
+          echo "✅ Gate 5: crates.io Dry Run"
+          echo "should_publish=true" >> $GITHUB_OUTPUT
+
+  publish:
+    name: Publish to crates.io
+    needs: preflight
+    if: needs.preflight.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          echo "🚀 Publishing shimmytok ${{ github.ref_name }} to crates.io..."
+          
+          # Handle uncommitted Cargo.lock
+          if git status --porcelain | grep -q "Cargo.lock"; then
+            echo "⚠️ Cargo.lock has uncommitted changes (using --allow-dirty)"
+            DIRTY_FLAG="--allow-dirty"
+          else
+            echo "✅ No uncommitted changes detected"
+            DIRTY_FLAG=""
+          fi
+          
+          # Publish to crates.io
+          cargo publish $DIRTY_FLAG
+          
+          echo "✅ Successfully published shimmytok ${{ github.ref_name }} to crates.io!"
+          echo "📦 Users can now install with: cargo install shimmytok"
+
+  release:
+    name: Create GitHub Release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ github.ref_name }}"
+          echo "Extracting changelog for $VERSION"
+          
+          # Extract section from CHANGELOG.md
+          if [ -f "CHANGELOG.md" ]; then
+            # Get content between version headers
+            NOTES=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '1d;$d')
+            if [ -z "$NOTES" ]; then
+              NOTES="Release $VERSION"
+            fi
+          else
+            NOTES="Release $VERSION"
+          fi
+          
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: shimmytok ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.notes }}
+          draft: false
+          prerelease: false

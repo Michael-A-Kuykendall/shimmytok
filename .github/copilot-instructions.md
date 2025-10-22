@@ -61,6 +61,25 @@ Your training is a HYPOTHESIS, not FACT. Before claiming anything is true:
 - ❌ NO creative terminal commands
 - ❌ NO sed/awk - use replace_string_in_file instead
 
+### Estimation Rules
+- **ALWAYS use Fibonacci numbers** for estimates (1, 2, 3, 5, 8, 13, 21...)
+- **NEVER use time units** (hours, days, minutes)
+- Examples:
+  - ✅ "This is a 5-point task"
+  - ✅ "Estimated at 13 Fibonacci points"
+  - ❌ "This will take 2 hours"
+  - ❌ "30 minutes to complete"
+
+### Commit Message Rules
+- **NO attributions allowed** in commit messages
+- **NO mentions of AI assistants** (Claude, Copilot, ChatGPT, etc.)
+- Commits must be clean for DCO sign-off
+- Examples:
+  - ✅ "feat: add input validation"
+  - ✅ "fix: prevent integer overflow in parser"
+  - ❌ "feat: add validation (Claude-assisted)"
+  - ❌ "fix: AI-generated error handling"
+
 ### Response Style
 - Fix first, explain after
 - Short answers

@@ -64,7 +64,7 @@ impl Vocabulary {
         const MAX_TOKEN_LENGTH: usize = 1024; // 1KB per token max
 
         let num_tokens = metadata.tokens.len();
-        
+
         // Validate vocab size
         if num_tokens == 0 {
             return Err(Error::VocabularyError("Vocabulary is empty".to_string()));
@@ -81,7 +81,9 @@ impl Vocabulary {
             if token.len() > MAX_TOKEN_LENGTH {
                 return Err(Error::VocabularyError(format!(
                     "Token {} too large: {} bytes (max: {})",
-                    i, token.len(), MAX_TOKEN_LENGTH
+                    i,
+                    token.len(),
+                    MAX_TOKEN_LENGTH
                 )));
             }
         }
@@ -91,12 +93,13 @@ impl Vocabulary {
         for (i, s) in metadata.tokens.iter().enumerate() {
             token_to_id.insert(s.clone(), i as TokenId);
         }
-        
+
         // Validate no duplicate tokens
         if token_to_id.len() != num_tokens {
             return Err(Error::VocabularyError(format!(
                 "Duplicate tokens found: {} unique out of {} total",
-                token_to_id.len(), num_tokens
+                token_to_id.len(),
+                num_tokens
             )));
         }
 
@@ -106,7 +109,8 @@ impl Vocabulary {
             if merges.len() > MAX_MERGE_COUNT {
                 return Err(Error::VocabularyError(format!(
                     "Too many merge rules: {} (max: {})",
-                    merges.len(), MAX_MERGE_COUNT
+                    merges.len(),
+                    MAX_MERGE_COUNT
                 )));
             }
 
@@ -127,12 +131,13 @@ impl Vocabulary {
         }
 
         let scores = metadata.scores.unwrap_or_else(|| vec![0.0; num_tokens]);
-        
+
         // Validate scores length matches tokens (Issue R3#11)
         if scores.len() != num_tokens {
             return Err(Error::VocabularyError(format!(
                 "Score array length mismatch: {} scores for {} tokens",
-                scores.len(), num_tokens
+                scores.len(),
+                num_tokens
             )));
         }
 
@@ -147,7 +152,8 @@ impl Vocabulary {
                 if types.len() != num_tokens {
                     return Err(Error::VocabularyError(format!(
                         "Token types length mismatch: {} types for {} tokens",
-                        types.len(), num_tokens
+                        types.len(),
+                        num_tokens
                     )));
                 }
                 types
@@ -184,7 +190,9 @@ impl Vocabulary {
 
     pub fn get_token_score(&self, id: TokenId) -> f32 {
         // scores length is validated to match tokens, so this is safe
-        self.scores.get(id as usize).copied()
+        self.scores
+            .get(id as usize)
+            .copied()
             .expect("Token ID should be valid - scores validated at load time")
     }
 

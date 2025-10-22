@@ -164,7 +164,7 @@ impl TokenizerImpl for SentencePieceTokenizer {
                 )));
             }
             iterations += 1;
-            
+
             if bigram.left >= symbols.len() || bigram.right >= symbols.len() {
                 continue;
             }
@@ -374,11 +374,27 @@ fn resegment(
 
             if left_sym.len > 0 {
                 let left_text = &full_text[left_sym.pos..left_sym.pos + left_sym.len];
-                resegment(left_text, full_text, symbols, rev_merge, vocab, output, depth + 1);
+                resegment(
+                    left_text,
+                    full_text,
+                    symbols,
+                    rev_merge,
+                    vocab,
+                    output,
+                    depth + 1,
+                );
             }
             if right_sym.len > 0 {
                 let right_text = &full_text[right_sym.pos..right_sym.pos + right_sym.len];
-                resegment(right_text, full_text, symbols, rev_merge, vocab, output, depth + 1);
+                resegment(
+                    right_text,
+                    full_text,
+                    symbols,
+                    rev_merge,
+                    vocab,
+                    output,
+                    depth + 1,
+                );
             }
             return;
         }

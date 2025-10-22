@@ -8,7 +8,7 @@ keywords = ["tokenizer", "gguf", "llama", "sentencepiece", "llm"]
 categories = ["text-processing", "encoding", "parser-implementations"]
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/yourusername/shimmytok"
+repository = "https://github.com/Michael-A-Kuykendall/shimmytok"
 documentation = "https://docs.rs/shimmytok"
 
 [dependencies]

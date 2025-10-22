@@ -1,15 +1,33 @@
+<div align="center">
+
 # shimmytok
 
-Pure Rust tokenizer for GGUF models with llama.cpp compatibility.
+### The pure Rust tokenizer for GGUF models
+**llama.cpp compatible • standalone • no C++ required**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Crates.io](https://img.shields.io/crates/v/shimmytok.svg)](https://crates.io/crates/shimmytok)
+[![Rust](https://img.shields.io/badge/rust-stable-brightgreen.svg)](https://rustup.rs/)
+[![💝 Sponsor this project](https://img.shields.io/badge/💝_Sponsor-ea4aaa?style=flat&logo=github&logoColor=white)](https://github.com/sponsors/Michael-A-Kuykendall)
+
+</div>
+
+---
+
+**shimmytok will be free forever.** MIT licensed, no strings attached.
+
+💝 **If shimmytok helps you, consider [sponsoring](https://github.com/sponsors/Michael-A-Kuykendall) — 100% of support goes to keeping it free forever.**
+
+---
 
 ## Features
 
 - 🦀 **Pure Rust** - No C++ dependencies, works everywhere Rust works
 - 📦 **Load from GGUF** - Read tokenizers directly from model files
 - ✅ **100% Compatible** - Validated against llama.cpp output
-- 🧪 **Fully Tested** - 8/8 test cases match llama.cpp exactly
-- 🎯 **Simple API** - Just 3 methods: load, encode, decode
-- 🚀 **Lightweight** - Only 1157 lines of code
+- 🧪 **Fully Tested** - 30 comprehensive tests, 8/8 llama.cpp validation
+- 🎯 **Simple API** - Just 6 public methods: `from_gguf_file`, `encode`, `decode`, `decode_single`, `vocab_size`, `token_to_piece`
+- 🚀 **Lightweight** - ~2,700 lines of source code, minimal dependencies
 
 ## Why shimmytok?
 
@@ -102,17 +120,56 @@ Both algorithms are direct ports from llama.cpp source code analysis.
 - Optimized for correctness, not yet for maximum performance
 - Implements 2 most common pre-tokenizer patterns (GPT-2, Llama-3); additional patterns can be added as needed
 
+## Community & Support
+
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/Michael-A-Kuykendall/shimmytok/issues)
+- **💬 Discussions**: [GitHub Discussions](https://github.com/Michael-A-Kuykendall/shimmytok/discussions)
+- **💝 Sponsorship**: [GitHub Sponsors](https://github.com/sponsors/Michael-A-Kuykendall)
+
+### 💝 Support shimmytok's Growth
+
+If shimmytok saves you time and enables your Rust LLM projects, consider sponsoring:
+
+- **$5/month**: Coffee tier ☕ - Eternal gratitude + sponsor badge
+- **$25/month**: Bug prioritizer 🐛 - Priority support + name in [SPONSORS.md](SPONSORS.md)
+- **$100/month**: Corporate backer 🏢 - Logo placement + recognition
+- **$500/month**: Infrastructure partner 🚀 - Direct support + roadmap input
+
+[**🎯 Become a Sponsor**](https://github.com/sponsors/Michael-A-Kuykendall) | See our amazing [sponsors](SPONSORS.md) 🙏
+
 ## Contributing
 
-Contributions welcome! This is a small, focused codebase (1157 LOC) that's easy to understand.
+Contributions are welcome! This is a focused codebase (~2,700 LOC) that's easy to understand.
 
-## License
+**All contributions must be signed off with the Developer Certificate of Origin (DCO).**
 
-MIT
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines and [DCO.md](DCO.md) for details.
+
+```bash
+# Quick setup for auto sign-off
+git config format.signoff true
+```
+
+## Security
+
+Found a security vulnerability? Please see [SECURITY.md](SECURITY.md) for responsible disclosure.
+
+## License & Philosophy
+
+**MIT License** - forever and always.
+
+**Philosophy**: Foundation libraries should be reliable, focused, and free.
+
+**Promise**: This will never become a paid product. If you want to support development, [sponsor it](https://github.com/sponsors/Michael-A-Kuykendall).
+
+---
+
+**Forever maintainer**: Michael A. Kuykendall  
+**Mission**: Pure Rust tokenization for the LLM ecosystem
 
 ## Attribution
 
-Based on [llama.cpp](https://github.com/ggerganov/llama.cpp) by Georgi Gerganov and the [SentencePiece](https://github.com/google/sentencepiece) algorithm by Google.
+Based on [llama.cpp](https://github.com/ggerganov/llama.cpp) by Georgi Gerganov (MIT License) and the [SentencePiece](https://github.com/google/sentencepiece) algorithm by Google (Apache 2.0).
 
 ## See Also
 

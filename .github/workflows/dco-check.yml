@@ -1,0 +1,40 @@
+name: DCO Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  dco_check:
+    name: Verify DCO Sign-off
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commits for DCO sign-off
+        run: |
+          echo "🔍 Checking commits for DCO sign-off..."
+          
+          # Get commits in this PR
+          git log --format="%H %s" --no-merges origin/main..HEAD | while read commit message; do
+            if git show --format="%B" "$commit" | grep -q "Signed-off-by:"; then
+              echo "✅ $commit: $message"
+            else
+              echo "❌ $commit: $message (missing Signed-off-by)"
+              echo ""
+              echo "ERROR: Commit $commit is missing DCO sign-off"
+              echo ""
+              echo "To fix this:"
+              echo "  git rebase HEAD~N --signoff  # where N is number of commits"
+              echo "  git push --force-with-lease"
+              echo ""
+              echo "Or configure auto sign-off:"
+              echo "  git config format.signoff true"
+              exit 1
+            fi
+          done
+          
+          echo ""
+          echo "✅ All non-merge commits have proper DCO sign-off"
