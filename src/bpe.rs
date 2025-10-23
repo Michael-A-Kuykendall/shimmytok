@@ -47,47 +47,22 @@ const DBRX_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|
 /// Smaug pattern - Same as Llama-3
 const SMAUG_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
-/// Poro pattern (Finnish-focused) - Same as Bloom
-const PORO_PATTERN: &str = r" ?[^(\s|.,!?…。，、।۔،)]+";
-
 /// DeepSeek-v3 pattern (NEW in 2025) 
 const DEEPSEEK_V3_PATTERN: &str = r"\p{N}{1,3}|[一-龥぀-ゟ゠-ヿ]+|[!#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~][A-Za-z]+|[^\r\n\p{L}\p{P}\p{S}]?[\p{L}\p{M}]+| ?[\p{P}\p{S}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
 /// Hunyuan-Dense pattern
 const HUNYUAN_DENSE_PATTERN: &str = r"\p{N}{1,3}|[一-龥぀-ゟ゠-ヿ]+|[!#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~][A-Za-z]+|[^\r\n\p{L}\p{P}\p{S}]?[\p{L}\p{M}]+| ?[\p{P}\p{S}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
-/// StableLM2 pattern - Same as Qwen2
-const STABLELM2_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
-/// Hunyuan pattern - Same as Qwen2
-const HUNYUAN_PATTERN: &str = r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
 
 /// Viking pattern (Norwegian)
 const VIKING_PATTERN: &str = r" ?[^(\s|.,!?…。，、।۔،)]+";
 
-/// GPT3-Finnish pattern - Same as Bloom
-const GPT3_FINNISH_PATTERN: &str = r" ?[^(\s|.,!?…。，、।۔،)]+";
 
-/// Refact pattern - Same as StarCoder
-const REFACT_PATTERN: &str = r"\p{N}|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
 
-/// SmolLM pattern - Same as StarCoder
-const SMOLLM_PATTERN: &str = r"\p{N}|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
 
-/// Codeshell pattern - Same as StarCoder
-const CODESHELL_PATTERN: &str = r"\p{N}|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
 
-/// Exaone pattern - Same as StarCoder
-const EXAONE_PATTERN: &str = r"\p{N}|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
 
-/// Minerva pattern - Same as StarCoder
-const MINERVA_PATTERN: &str = r"\p{N}|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
-
-/// Trillion pattern - Same as GPT-2
-const TRILLION_PATTERN: &str = r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
-
-/// Granite-Docling pattern - Same as GPT-2
-const GRANITE_DOCLING_PATTERN: &str = r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)";
 
 /// Tekken pattern (complex case-based tokenization)
 const TEKKEN_PATTERN: &str = r"[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))*((?=[\p{L}])([^A-Z]))+|[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))+((?=[\p{L}])([^A-Z]))*|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n/]*|\s*[\r\n]+|\s+(?!\S)|\s+";
@@ -152,8 +127,8 @@ impl PartialOrd for Bigram {
 }
 
 pub struct BPETokenizer {
-    // Lazily compiled regex patterns
-    regex_cache: std::sync::Mutex<HashMap<String, regex::Regex>>,
+    // Lazily compiled regex patterns (using fancy-regex for lookahead support)
+    regex_cache: std::sync::Mutex<HashMap<String, fancy_regex::Regex>>,
 }
 
 impl Default for BPETokenizer {
@@ -223,7 +198,7 @@ impl BPETokenizer {
     }
 
     /// Get or compile the pre-tokenization regex
-    fn get_regex(&self, pre_type: &str) -> Result<regex::Regex, String> {
+    fn get_regex(&self, pre_type: &str) -> Result<fancy_regex::Regex, String> {
         let mut cache = self
             .regex_cache
             .lock()
@@ -234,7 +209,7 @@ impl BPETokenizer {
         }
 
         let pattern = Self::get_pattern(pre_type);
-        let regex = regex::Regex::new(pattern)
+        let regex = fancy_regex::Regex::new(pattern)
             .map_err(|e| format!("Failed to compile regex for '{}': {}", pre_type, e))?;
 
         cache.insert(pre_type.to_string(), regex.clone());
@@ -248,6 +223,7 @@ impl BPETokenizer {
 
         Ok(regex
             .find_iter(text)
+            .filter_map(|m| m.ok())
             .map(|m| m.as_str().to_string())
             .collect())
     }
@@ -416,18 +392,17 @@ impl BPETokenizer {
             )));
         }
 
-        // GPT-2 byte-level BPE: convert text bytes to unicode using GPT-2's byte encoder
-        let text_encoded = crate::byte_encoder::encode_bytes(text);
-
-        // Pre-tokenize text into fragments
-        let fragments = self.pre_tokenize(&text_encoded, vocab).map_err(|e| {
+        // Pre-tokenize ORIGINAL text (not byte-encoded) into fragments
+        let fragments = self.pre_tokenize(text, vocab).map_err(|e| {
             crate::Error::TokenizationFailed(format!("Pre-tokenization failed: {}", e))
         })?;
 
-        // Apply BPE to each fragment
+        // Apply BPE to each fragment (after byte-encoding)
         let mut result = Vec::new();
         for fragment in fragments {
-            let tokens = self.bpe_fragment(&fragment, vocab)?;
+            // GPT-2 byte-level BPE: convert fragment bytes to unicode
+            let fragment_encoded = crate::byte_encoder::encode_bytes(&fragment);
+            let tokens = self.bpe_fragment(&fragment_encoded, vocab)?;
             // Check output size to prevent memory exhaustion
             if result.len() + tokens.len() > crate::MAX_OUTPUT_TOKENS {
                 return Err(crate::Error::TokenizationFailed(format!(
