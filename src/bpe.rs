@@ -283,29 +283,52 @@ impl BPETokenizer {
                 .collect());
         }
 
-        // For multiple patterns, apply sequentially like llama.cpp
-        // Each pattern further splits the previous results
-        let mut fragments = vec![text.to_string()];
+        // For multiple patterns, use offset-based approach like llama.cpp
+        // Each pattern refines the boundaries, preserving both matches and non-matches
+        let mut offsets: Vec<(usize, usize)> = vec![(0, text.len())];
         
         for regex in regexes {
-            let mut new_fragments = Vec::new();
-            for fragment in fragments {
-                let matches: Vec<String> = regex
-                    .find_iter(&fragment)
+            let mut new_offsets = Vec::new();
+            
+            for (start, end) in offsets {
+                let fragment = &text[start..end];
+                
+                // Collect all matches in this fragment
+                let matches: Vec<_> = regex
+                    .find_iter(fragment)
                     .filter_map(|m| m.ok())
-                    .map(|m| m.as_str().to_string())
                     .collect();
-                if !matches.is_empty() {
-                    new_fragments.extend(matches);
+                
+                if matches.is_empty() {
+                    // No matches - keep the original offset unchanged
+                    new_offsets.push((start, end));
                 } else {
-                    // If no matches, keep the fragment
-                    new_fragments.push(fragment);
+                    // Split into matched and unmatched regions
+                    let mut last_pos = 0;
+                    
+                    for m in matches {
+                        // Add unmatched gap before this match
+                        if m.start() > last_pos {
+                            new_offsets.push((start + last_pos, start + m.start()));
+                        }
+                        
+                        // Add the match
+                        new_offsets.push((start + m.start(), start + m.end()));
+                        last_pos = m.end();
+                    }
+                    
+                    // Add final unmatched portion
+                    if last_pos < fragment.len() {
+                        new_offsets.push((start + last_pos, end));
+                    }
                 }
             }
-            fragments = new_fragments;
+            
+            offsets = new_offsets;
         }
 
-        Ok(fragments)
+        // Convert offsets to strings
+        Ok(offsets.iter().map(|(start, end)| text[*start..*end].to_string()).collect())
     }
 
     /// Apply BPE to a single text fragment
