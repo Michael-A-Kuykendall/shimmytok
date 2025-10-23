@@ -154,16 +154,21 @@ impl BPETokenizer {
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
             ],
             
-            // DeepSeek family
+            // DeepSeek family (patterns from llama.cpp llama-vocab.cpp lines 323-332)
             "deepseek-llm" => vec![
-                r"[\r\n]+",
-                r"[\p{P}\p{S}]",
-                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+",
+                r"[\r\n]",
+                r"\s?[A-Za-zµÀ-ÖØ-öø-ƺƼ-ƿǄ-ʓʕ-ʯͰ-ͳͶͷͻ-ͽͿΆΈ-ΊΌΎ-ΡΣ-ϵϷ-ҁҊ-ԯԱ-ՖႠ-ჅᎠ-Ᏽᏸ-ᏽᲐ-ᲺᲽ-Ჿᴀ-ᴫᵫ-ᵷᵹ-ᶚḀ-ἕἘ-Ἕἠ-ὅὈ-Ὅὐ-ὗὙὛὝὟ-ώᾀ-ᾴᾶ-ᾼιῂ-ῄῆ-ῌῐ-ΐῖ-Ίῠ-Ῥῲ-ῴῶ-ῼℂℇℊ-ℓℕℙ-ℝℤΩℨK-ℭℯ-ℴℹℼ-ℿⅅ-ⅉⅎↃↄⰀ-ⱻⱾ-ⳤⳫ-ⳮⳲⳳꙀ-ꙭꚀ-ꚛꜢ-ꝯꝱ-ꞇꞋ-ꞎꭰ-ꮿﬀ-ﬆﬓ-ﬗＡ-Ｚａ-ｚ𐐀-𐑏𐒰-𐓓𐓘-𐓻𐲀-𐲲𐳀-𐳲𑢠-𑣟𞤀-𞥃]+",
+                r"\s?[!-/:-~！-／：-～'-‟　-。]+",
+                r"\s+$",
+                r"[一-龥ࠀ-一가-퟿]+",
+                r"\p{N}+",
             ],
             "deepseek-coder" => vec![
-                r"[\r\n]+",
-                r"[\p{P}\p{S}\$]",
-                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+",
+                r"[\r\n]",
+                r"\s?\p{L}+",
+                r"\s?\p{P}+",
+                r"[一-龥ࠀ-一가-퟿]+",
+                r"\p{N}",
             ],
             "deepseek-v3" => vec![
                 r"\p{N}{1,3}",
@@ -180,7 +185,7 @@ impl BPETokenizer {
             // StarCoder family (TWO patterns!)
             "starcoder" | "refact" | "command-r" | "smollm" | "codeshell" | "exaone" | "minerva" => vec![
                 r"\p{N}",  // First: split individual digits
-                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+",
+                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)",
             ],
             
             // GPT-2 family
@@ -239,9 +244,12 @@ impl BPETokenizer {
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
             ],
             
-            // Default (GPT-2)
-            _ => vec![
+            // Default case (from llama.cpp line 419-423)
+            // Used when model file doesn't specify pre-tokenizer type
+            "default" | _ => vec![
+                r"[\p{P}\$\+<=>^~\|]+",
                 r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)",
+                r"\p{N}+",
             ],
         }
     }
@@ -271,7 +279,7 @@ impl BPETokenizer {
 
     /// Pre-tokenize text using regex patterns (applied sequentially like llama.cpp)
     fn pre_tokenize(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<String>, String> {
-        let pre_type = vocab.pre_type().unwrap_or("gpt2");
+        let pre_type = vocab.pre_type().unwrap_or("default");
         let regexes = self.get_regexes(pre_type)?;
 
         if regexes.len() == 1 {
