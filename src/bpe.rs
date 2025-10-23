@@ -128,7 +128,8 @@ impl PartialOrd for Bigram {
 
 pub struct BPETokenizer {
     // Lazily compiled regex patterns (using fancy-regex for lookahead support)
-    regex_cache: std::sync::Mutex<HashMap<String, fancy_regex::Regex>>,
+    // Maps pre-type to vector of compiled patterns (applied sequentially)
+    regex_cache: std::sync::Mutex<HashMap<String, Vec<fancy_regex::Regex>>>,
 }
 
 impl Default for BPETokenizer {
@@ -144,88 +145,167 @@ impl BPETokenizer {
         Self::default()
     }
 
-    /// Get the appropriate regex pattern for a pre-tokenizer type
-    fn get_pattern(pre_type: &str) -> &'static str {
+    /// Get the appropriate regex patterns for a pre-tokenizer type
+    /// Returns a vector of patterns that should be applied sequentially
+    fn get_patterns(pre_type: &str) -> Vec<&'static str> {
         match pre_type {
             // Llama-3 family
-            "llama3" | "llama-bpe" | "llama-v3" | "falcon3" => LLAMA3_PATTERN,
+            "llama3" => vec![
+                r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
             
             // DeepSeek family
-            "deepseek-llm" => DEEPSEEK_LLM_PATTERN,
-            "deepseek-coder" => DEEPSEEK_CODER_PATTERN,
-            "deepseek-v3" => DEEPSEEK_V3_PATTERN,
-            "deepseek-r1-qwen" => QWEN2_PATTERN,
+            "deepseek-llm" => vec![
+                r"[\r\n]+",
+                r"[\p{P}\p{S}]",
+                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+",
+            ],
+            "deepseek-coder" => vec![
+                r"[\r\n]+",
+                r"[\p{P}\p{S}\$]",
+                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+",
+            ],
+            "deepseek-v3" => vec![
+                r"\p{N}{1,3}",
+                r"[一-龥぀-ゟ゠-ヿ]+",
+                r"[!#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~][A-Za-z]+|[^\r\n\p{L}\p{P}\p{S}]?[\p{L}\p{M}]+| ?[\p{P}\p{S}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
+            "deepseek-r1-qwen" => vec![
+                r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
             
             // Falcon
-            "falcon" => FALCON_PATTERN,
+            "falcon" => vec![r"\n| ?[\p{L}\p{N}]+| ?[^\s\p{L}\p{N}]+|\s+"],
             
-            // StarCoder family (many models use this)
-            "starcoder" | "refact" | "command-r" | "smollm" | "codeshell" | "exaone" | "minerva" => STARCODER_PATTERN,
+            // StarCoder family (TWO patterns!)
+            "starcoder" | "refact" | "command-r" | "smollm" | "codeshell" | "exaone" | "minerva" => vec![
+                r"\p{N}",  // First: split individual digits
+                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+",
+            ],
             
-            // GPT-2 family (most common, many aliases)
-            "gpt-2" | "phi-2" | "jina-es" | "jina-de" | "mpt" | "olmo" | "jais" | "trillion" | "granite-docling" | "exaone4" => GPT2_PATTERN,
+            // GPT-2 family
+            "gpt-2" | "phi-2" | "jina-es" | "jina-de" | "mpt" | "olmo" | "jais" | "trillion" | "granite-docling" | "exaone4" => vec![
+                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+",
+            ],
             
             // Qwen2 family
-            "qwen2" | "stablelm2" | "hunyuan" | "megrez" => QWEN2_PATTERN,
+            "qwen2" | "stablelm2" | "hunyuan" | "megrez" => vec![
+                r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
             
             // Bloom family
-            "bloom" | "poro-chat" | "gpt3-finnish" => BLOOM_PATTERN,
+            "bloom" | "poro-chat" | "gpt3-finnish" => vec![r"\s+|\S+"],
             
             // ChatGLM
-            "chatglm4" | "glm4" | "chatglm-bpe" => CHATGLM4_PATTERN,
+            "chatglm4" | "glm4" | "chatglm-bpe" => vec![
+                r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
             
             // Same-as-Llama-3 patterns
-            "dbrx" => DBRX_PATTERN,
-            "smaug-bpe" => SMAUG_PATTERN,
+            "dbrx" => vec![
+                r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
+            "smaug-bpe" => vec![
+                r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
             
             // Norwegian
-            "viking" => VIKING_PATTERN,
+            "viking" => vec![r" ?[^(\s|.,!?…。，、।۔،)]+"],
             
             // Advanced/Specialized
-            "tekken" => TEKKEN_PATTERN,
-            "chameleon" => CHAMELEON_PATTERN,
-            "gpt-4o" | "llama4" => GPT4O_PATTERN,
-            "kimi-k2" => KIMI_K2_PATTERN,
-            "superbpe" => SUPERBPE_PATTERN,
-            "bailingmoe" | "bailingmoe2" | "llada-moe" => BAILINGMOE_PATTERN,
-            "seed-coder" => SEED_CODER_PATTERN,
-            "hunyuan-dense" => HUNYUAN_DENSE_PATTERN,
-            "grok-2" => GROK_2_PATTERN,
+            "tekken" => vec![
+                r"[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))*((?=[\p{L}])([^A-Z]))+|[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))+((?=[\p{L}])([^A-Z]))*|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n/]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
+            "chameleon" => vec![
+                r"<sentinel:[0-9]+>|(IMGIMG)((A|B|C|D|E|F|G|H|I){1,4})Z|([\t\n]|    |  )|\p{N}|[\p{P}!-/:-@\[-`{-~]|'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)",
+            ],
+            "gpt-4o" | "llama4" => vec![
+                r"[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))*((?=[\p{L}])([^A-Z]))+(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])?|[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))+((?=[\p{L}])([^A-Z]))*(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])?|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n/]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
+            "kimi-k2" => vec![r"\p{Han}+"],
+            "superbpe" => vec![r"\p{N}+|(?=(\d{3})+(?!\d))"],
+            "bailingmoe" | "bailingmoe2" | "llada-moe" => vec![
+                r"'(?:[sSdDmMtT]|[lL][lL]|[vV][eE]|[rR][eE])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s+",
+            ],
+            "seed-coder" => vec![
+                r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1}| ?[^\s\p{L}\p{N}\r\n]+|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
+            "hunyuan-dense" => vec![
+                r"\p{N}{1,3}",
+                r"[一-龥぀-ゟ゠-ヿ]+",
+                r"[!#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~][A-Za-z]+|[^\r\n\p{L}\p{P}\p{S}]?[\p{L}\p{M}]+| ?[\p{P}\p{S}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
+            "grok-2" => vec![
+                r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+            ],
             
             // Default (GPT-2)
-            _ => GPT2_PATTERN,
+            _ => vec![
+                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)",
+            ],
         }
     }
 
-    /// Get or compile the pre-tokenization regex
-    fn get_regex(&self, pre_type: &str) -> Result<fancy_regex::Regex, String> {
+    /// Get or compile the pre-tokenization regex patterns
+    fn get_regexes(&self, pre_type: &str) -> Result<Vec<fancy_regex::Regex>, String> {
         let mut cache = self
             .regex_cache
             .lock()
             .map_err(|e| format!("Mutex lock failed: {}", e))?;
 
-        if let Some(regex) = cache.get(pre_type) {
-            return Ok(regex.clone());
+        if let Some(regexes) = cache.get(pre_type) {
+            return Ok(regexes.clone());
         }
 
-        let pattern = Self::get_pattern(pre_type);
-        let regex = fancy_regex::Regex::new(pattern)
-            .map_err(|e| format!("Failed to compile regex for '{}': {}", pre_type, e))?;
+        let patterns = Self::get_patterns(pre_type);
+        let mut regexes = Vec::new();
+        for pattern in patterns {
+            let regex = fancy_regex::Regex::new(pattern)
+                .map_err(|e| format!("Failed to compile regex for '{}': {}", pre_type, e))?;
+            regexes.push(regex);
+        }
 
-        cache.insert(pre_type.to_string(), regex.clone());
-        Ok(regex)
+        cache.insert(pre_type.to_string(), regexes.clone());
+        Ok(regexes)
     }
 
-    /// Pre-tokenize text using regex patterns
+    /// Pre-tokenize text using regex patterns (applied sequentially like llama.cpp)
     fn pre_tokenize(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<String>, String> {
         let pre_type = vocab.pre_type().unwrap_or("gpt2");
-        let regex = self.get_regex(pre_type)?;
+        let regexes = self.get_regexes(pre_type)?;
 
-        Ok(regex
-            .find_iter(text)
-            .filter_map(|m| m.ok())
-            .map(|m| m.as_str().to_string())
-            .collect())
+        if regexes.len() == 1 {
+            // Fast path for single-pattern models (most common)
+            return Ok(regexes[0]
+                .find_iter(text)
+                .filter_map(|m| m.ok())
+                .map(|m| m.as_str().to_string())
+                .collect());
+        }
+
+        // For multiple patterns, apply sequentially like llama.cpp
+        // Each pattern further splits the previous results
+        let mut fragments = vec![text.to_string()];
+        
+        for regex in regexes {
+            let mut new_fragments = Vec::new();
+            for fragment in fragments {
+                let matches: Vec<String> = regex
+                    .find_iter(&fragment)
+                    .filter_map(|m| m.ok())
+                    .map(|m| m.as_str().to_string())
+                    .collect();
+                if !matches.is_empty() {
+                    new_fragments.extend(matches);
+                } else {
+                    // If no matches, keep the fragment
+                    new_fragments.push(fragment);
+                }
+            }
+            fragments = new_fragments;
+        }
+
+        Ok(fragments)
     }
 
     /// Apply BPE to a single text fragment
