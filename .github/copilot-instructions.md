@@ -1,5 +1,21 @@
 # Copilot Instructions for shimmytok
 
+## 🛑 ABSOLUTELY NO VIBE CODING
+
+**VIBE CODING = CREATIVE FREESTYLING WITHOUT EXPLICIT PLAN OR SOURCE**
+
+When porting llama.cpp (or any reference implementation):
+1. **STOP if you don't fully understand the source**
+2. **ASK FOR HUMAN HELP immediately**
+3. **DO NOT improvise or "figure it out yourself"**
+4. **ONLY implement what you can see in the reference code**
+
+If you catch yourself thinking "I'll try this approach" or "this should work" → **STOP AND ASK**
+
+We operate from **plans and reference implementations ONLY**.
+
+---
+
 ## ⚠️ CRITICAL: YOUR TRAINING IS NOT TRUTH
 
 **Your training data is from April 2024. It is now October 2025.**
