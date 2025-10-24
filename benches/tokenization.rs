@@ -97,11 +97,79 @@ fn bench_encode_batch(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_multi_pattern_models(c: &mut Criterion) {
+    // Benchmark multi-pattern models (DeepSeek, StarCoder)
+    let models = vec![
+        ("deepseek-llm", "deepseek-llm-7b-chat-q4_k_m.gguf"),
+        ("starcoder", "starcoder2-3b-q4_k_m.gguf"),
+    ];
+
+    for (name, filename) in models {
+        let model_path = dirs::home_dir()
+            .map(|h| h.join(".cache/models/gguf").join(filename))
+            .and_then(|p| p.to_str().map(String::from))
+            .unwrap_or_else(|| filename.to_string());
+
+        if !Path::new(&model_path).exists() {
+            eprintln!("Skipping {name} benchmark: model not found");
+            continue;
+        }
+
+        let tokenizer = match Tokenizer::from_gguf_file(&model_path) {
+            Ok(t) => t,
+            Err(e) => {
+                eprintln!("Failed to load {name}: {e}");
+                continue;
+            }
+        };
+
+        let text = "Hello world! This is a test with numbers 123 and 中文.";
+        c.bench_function(&format!("encode_{name}"), |b| {
+            b.iter(|| tokenizer.encode(black_box(text), false));
+        });
+    }
+}
+
+fn bench_sentencepiece_models(c: &mut Criterion) {
+    // Benchmark SentencePiece models (Llama-3, Mistral)
+    let models = vec![
+        ("llama3", "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf"),
+        ("mistral", "mistral-7b-instruct-v0.2-q4_k_m.gguf"),
+    ];
+
+    for (name, filename) in models {
+        let model_path = dirs::home_dir()
+            .map(|h| h.join(".cache/models/gguf").join(filename))
+            .and_then(|p| p.to_str().map(String::from))
+            .unwrap_or_else(|| filename.to_string());
+
+        if !Path::new(&model_path).exists() {
+            eprintln!("Skipping {name} benchmark: model not found");
+            continue;
+        }
+
+        let tokenizer = match Tokenizer::from_gguf_file(&model_path) {
+            Ok(t) => t,
+            Err(e) => {
+                eprintln!("Failed to load {name}: {e}");
+                continue;
+            }
+        };
+
+        let text = "The quick brown fox jumps over the lazy dog.";
+        c.bench_function(&format!("encode_{name}"), |b| {
+            b.iter(|| tokenizer.encode(black_box(text), false));
+        });
+    }
+}
+
 criterion_group!(
     benches,
     bench_encode,
     bench_decode,
     bench_load,
-    bench_encode_batch
+    bench_encode_batch,
+    bench_multi_pattern_models,
+    bench_sentencepiece_models
 );
 criterion_main!(benches);
