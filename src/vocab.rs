@@ -71,8 +71,7 @@ impl Vocabulary {
         }
         if num_tokens > MAX_VOCAB_SIZE {
             return Err(Error::VocabularyError(format!(
-                "Vocabulary too large: {} tokens (max: {})",
-                num_tokens, MAX_VOCAB_SIZE
+                "Vocabulary too large: {num_tokens} tokens (max: {MAX_VOCAB_SIZE})"
             )));
         }
 
@@ -117,14 +116,12 @@ impl Vocabulary {
             for (rank, (left, right)) in merges.iter().enumerate() {
                 if !token_to_id.contains_key(left) {
                     return Err(Error::VocabularyError(format!(
-                        "Merge rule {} references unknown left token: '{}'",
-                        rank, left
+                        "Merge rule {rank} references unknown left token: '{left}'"
                     )));
                 }
                 if !token_to_id.contains_key(right) {
                     return Err(Error::VocabularyError(format!(
-                        "Merge rule {} references unknown right token: '{}'",
-                        rank, right
+                        "Merge rule {rank} references unknown right token: '{right}'"
                     )));
                 }
             }
@@ -176,18 +173,22 @@ impl Vocabulary {
         })
     }
 
+    #[must_use] 
     pub fn model_type(&self) -> &str {
         &self.model_type
     }
 
+    #[must_use] 
     pub fn get_token_id(&self, text: &str) -> Option<TokenId> {
         self.token_to_id.get(text).copied()
     }
 
+    #[must_use] 
     pub fn get_token_text(&self, id: TokenId) -> Option<&str> {
-        self.tokens.get(id as usize).map(|s| s.as_str())
+        self.tokens.get(id as usize).map(std::string::String::as_str)
     }
 
+    #[must_use] 
     pub fn get_token_score(&self, id: TokenId) -> f32 {
         // scores length is validated to match tokens, so this is safe
         self.scores
@@ -196,6 +197,7 @@ impl Vocabulary {
             .expect("Token ID should be valid - scores validated at load time")
     }
 
+    #[must_use] 
     pub fn get_token_type(&self, id: TokenId) -> TokenType {
         // token_types length is validated to match tokens, so this is safe
         self.token_types
@@ -204,9 +206,10 @@ impl Vocabulary {
             .expect("Token ID should be valid - token_types validated at load time")
     }
 
+    #[must_use] 
     pub fn byte_to_token(&self, byte: u8) -> TokenId {
         // Try hex format <0xXX> first (SPM style)
-        let hex_str = format!("<0x{:02X}>", byte);
+        let hex_str = format!("<0x{byte:02X}>");
         if let Some(id) = self.token_to_id.get(&hex_str) {
             return *id;
         }
@@ -219,6 +222,7 @@ impl Vocabulary {
             .unwrap_or(self.unk_token_id)
     }
 
+    #[must_use] 
     pub fn is_special_token(&self, id: TokenId) -> bool {
         matches!(
             self.get_token_type(id),
@@ -229,30 +233,37 @@ impl Vocabulary {
             || self.pad_token_id == Some(id)
     }
 
+    #[must_use] 
     pub fn add_bos_token(&self) -> bool {
         self.add_bos_token
     }
 
+    #[must_use] 
     pub fn add_eos_token(&self) -> bool {
         self.add_eos_token
     }
 
+    #[must_use] 
     pub fn bos_token_id(&self) -> TokenId {
         self.bos_token_id
     }
 
+    #[must_use] 
     pub fn eos_token_id(&self) -> TokenId {
         self.eos_token_id
     }
 
+    #[must_use] 
     pub fn unk_token_id(&self) -> TokenId {
         self.unk_token_id
     }
 
+    #[must_use] 
     pub fn get_merges(&self) -> &[(String, String)] {
         &self.merges
     }
 
+    #[must_use] 
     pub fn pre_type(&self) -> Option<&str> {
         if self.pre_type.is_empty() || self.pre_type == "default" {
             None
@@ -261,6 +272,7 @@ impl Vocabulary {
         }
     }
 
+    #[must_use] 
     pub fn n_tokens(&self) -> usize {
         self.tokens.len()
     }

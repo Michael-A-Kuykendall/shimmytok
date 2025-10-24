@@ -4,9 +4,7 @@ use std::path::Path;
 
 fn get_model_path() -> String {
     std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .map(|home| format!("{}/.cache/models/gguf/gpt2.Q4_K_M.gguf", home))
-        .unwrap_or_else(|_| "gpt2.Q4_K_M.gguf".to_string())
+        .or_else(|_| std::env::var("USERPROFILE")).map_or_else(|_| "gpt2.Q4_K_M.gguf".to_string(), |home| format!("{home}/.cache/models/gguf/gpt2.Q4_K_M.gguf"))
 }
 
 #[test]
@@ -14,21 +12,20 @@ fn test_invalid_token_id() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_invalid_token_id: model not found at {}",
-            model_path
+            "Skipping test_invalid_token_id: model not found at {model_path}"
         );
         return;
     }
     let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
 
     // GPT-2 has ~50K tokens, so 999999 is invalid
-    let invalid_tokens = vec![999999];
+    let invalid_tokens = vec![999_999];
     let result = tokenizer.decode(&invalid_tokens, false);
 
     assert!(result.is_err(), "Should fail on invalid token ID");
     match result {
         Err(Error::InvalidToken(_)) => { /* correct error type */ }
-        Err(e) => panic!("Wrong error type: {:?}", e),
+        Err(e) => panic!("Wrong error type: {e:?}"),
         Ok(_) => panic!("Should have failed"),
     }
 }
@@ -44,8 +41,7 @@ fn test_very_large_input() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_very_large_input: model not found at {}",
-            model_path
+            "Skipping test_very_large_input: model not found at {model_path}"
         );
         return;
     }
@@ -60,11 +56,10 @@ fn test_very_large_input() {
         Err(Error::TokenizationFailed(msg)) => {
             assert!(
                 msg.contains("too large"),
-                "Error should mention size: {}",
-                msg
+                "Error should mention size: {msg}"
             );
         }
-        Err(e) => panic!("Wrong error type: {:?}", e),
+        Err(e) => panic!("Wrong error type: {e:?}"),
         Ok(_) => panic!("Should have failed on 11MB input"),
     }
 }
@@ -74,8 +69,7 @@ fn test_empty_input() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_empty_input: model not found at {}",
-            model_path
+            "Skipping test_empty_input: model not found at {model_path}"
         );
         return;
     }
@@ -99,8 +93,7 @@ fn test_round_trip_fuzz() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_round_trip_fuzz: model not found at {}",
-            model_path
+            "Skipping test_round_trip_fuzz: model not found at {model_path}"
         );
         return;
     }
@@ -132,16 +125,15 @@ fn test_round_trip_fuzz() {
     for text in test_strings {
         let tokens = tokenizer
             .encode(text, false)
-            .expect(&format!("Failed to encode: {:?}", text));
+            .unwrap_or_else(|_| panic!("Failed to encode: {text:?}"));
 
         let decoded = tokenizer
             .decode(&tokens, false)
-            .expect(&format!("Failed to decode: {:?}", tokens));
+            .unwrap_or_else(|_| panic!("Failed to decode: {tokens:?}"));
 
         assert_eq!(
             text, decoded,
-            "Round-trip failed for: {:?}\n  Tokens: {:?}\n  Decoded: {:?}",
-            text, tokens, decoded
+            "Round-trip failed for: {text:?}\n  Tokens: {tokens:?}\n  Decoded: {decoded:?}"
         );
     }
 }
@@ -151,8 +143,7 @@ fn test_decode_with_special_tokens() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_decode_with_special_tokens: model not found at {}",
-            model_path
+            "Skipping test_decode_with_special_tokens: model not found at {model_path}"
         );
         return;
     }
@@ -172,8 +163,8 @@ fn test_decode_with_special_tokens() {
 
     // With BOS token enabled, should have more tokens
     // (depends on model config, but test the API works)
-    println!("With special: {:?}", tokens_with_special);
-    println!("Without special: {:?}", tokens_without);
+    println!("With special: {tokens_with_special:?}");
+    println!("Without special: {tokens_without:?}");
 
     // Both should decode successfully
     let decoded_with = tokenizer
@@ -183,8 +174,8 @@ fn test_decode_with_special_tokens() {
         .decode(&tokens_without, false)
         .expect("Decode without special failed");
 
-    println!("Decoded with: {:?}", decoded_with);
-    println!("Decoded without: {:?}", decoded_without);
+    println!("Decoded with: {decoded_with:?}");
+    println!("Decoded without: {decoded_without:?}");
 }
 
 #[test]
@@ -192,8 +183,7 @@ fn test_max_token_validation() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_max_token_validation: model not found at {}",
-            model_path
+            "Skipping test_max_token_validation: model not found at {model_path}"
         );
         return;
     }
@@ -202,7 +192,7 @@ fn test_max_token_validation() {
     // Create input that would produce many tokens
     // Worst case: every character becomes a token
     // "a b c d e..." with spaces = 2 tokens per pair
-    let many_chars: String = (0..1000).map(|i| format!("w{} ", i)).collect();
+    let many_chars: String = (0..1000).map(|i| format!("w{i} ")).collect();
 
     let result = tokenizer.encode(&many_chars, false);
     assert!(

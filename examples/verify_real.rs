@@ -3,9 +3,9 @@ use shimmytok::Tokenizer;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE"))?;
-    let model_path = format!("{}/.cache/models/gguf/gpt2.Q4_K_M.gguf", home);
+    let model_path = format!("{home}/.cache/models/gguf/gpt2.Q4_K_M.gguf");
 
-    println!("Loading real GGUF model: {}", model_path);
+    println!("Loading real GGUF model: {model_path}");
     let tokenizer = Tokenizer::from_gguf_file(&model_path)?;
 
     let test_cases = vec![
@@ -23,9 +23,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let tokens = tokenizer.encode(text, false)?;
         let decoded = tokenizer.decode(&tokens, false)?;
 
-        println!("Input:   '{}'", text);
+        println!("Input:   '{text}'");
         println!("Tokens:  {:?} ({} tokens)", tokens, tokens.len());
-        println!("Decoded: '{}'", decoded);
+        println!("Decoded: '{decoded}'");
         println!(
             "Match:   {}",
             if decoded == text {
@@ -44,8 +44,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if decoded != random_text {
         eprintln!("ERROR: Round-trip failed!");
-        eprintln!("  Original: {}", random_text);
-        eprintln!("  Decoded:  {}", decoded);
+        eprintln!("  Original: {random_text}");
+        eprintln!("  Decoded:  {decoded}");
         std::process::exit(1);
     }
 

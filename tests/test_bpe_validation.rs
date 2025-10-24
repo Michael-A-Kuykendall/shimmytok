@@ -39,12 +39,12 @@ fn run_llama_cpp_tokenize(model_path: &str, text: &str) -> Vec<u32> {
 }
 
 #[test]
-#[ignore] // Run with: cargo test test_gpt2_validation -- --ignored
+#[ignore = "Requires model file - run with: cargo test test_gpt2_validation -- --ignored"]
 fn test_gpt2_validation() {
     let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/gpt2.Q4_K_M.gguf";
     
     if !std::path::Path::new(&model_path).exists() {
-        println!("Skipping: model not found at {}", model_path);
+        println!("Skipping: model not found at {model_path}");
         return;
     }
 
@@ -65,12 +65,12 @@ fn test_gpt2_validation() {
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
         
         if shimmy_tokens == llama_tokens {
-            println!("  ✅ MATCH: {:?}", shimmy_tokens);
+            println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;
         } else {
             println!("  ❌ MISMATCH:");
-            println!("     shimmytok: {:?}", shimmy_tokens);
-            println!("     llama.cpp: {:?}", llama_tokens);
+            println!("     shimmytok: {shimmy_tokens:?}");
+            println!("     llama.cpp: {llama_tokens:?}");
             failed += 1;
         }
     }
@@ -80,20 +80,20 @@ fn test_gpt2_validation() {
 
     println!("\n========================================");
     println!("GPT-2 Validation Results:");
-    println!("  Passed: {}/{}", passed, total_tests);
-    println!("  Failed: {}/{}", failed, total_tests);
+    println!("  Passed: {passed}/{total_tests}");
+    println!("  Failed: {failed}/{total_tests}");
     println!("========================================");
 
     assert_eq!(failed, 0, "Some tests failed - see output above");
 }
 
 #[test]
-#[ignore]
+#[ignore = "Requires model file"]
 fn test_qwen2_validation() {
     let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/qwen2-7b-instruct-q4_k_m.gguf";
     
     if !std::path::Path::new(&model_path).exists() {
-        println!("Skipping: model not found at {}", model_path);
+        println!("Skipping: model not found at {model_path}");
         return;
     }
 
@@ -112,12 +112,12 @@ fn test_qwen2_validation() {
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
         
         if shimmy_tokens == llama_tokens {
-            println!("  ✅ MATCH: {:?}", shimmy_tokens);
+            println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;
         } else {
             println!("  ❌ MISMATCH:");
-            println!("     shimmytok: {:?}", shimmy_tokens);
-            println!("     llama.cpp: {:?}", llama_tokens);
+            println!("     shimmytok: {shimmy_tokens:?}");
+            println!("     llama.cpp: {llama_tokens:?}");
             failed += 1;
         }
     }
@@ -132,12 +132,12 @@ fn test_qwen2_validation() {
 }
 
 #[test]
-#[ignore]
+#[ignore = "Requires model file"]
 fn test_starcoder_validation() {
     let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/starcoder2-3b-Q4_K_M.gguf";
     
     if !std::path::Path::new(&model_path).exists() {
-        println!("Skipping: model not found at {}", model_path);
+        println!("Skipping: model not found at {model_path}");
         return;
     }
 
@@ -156,12 +156,12 @@ fn test_starcoder_validation() {
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
         
         if shimmy_tokens == llama_tokens {
-            println!("  ✅ MATCH: {:?}", shimmy_tokens);
+            println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;
         } else {
             println!("  ❌ MISMATCH:");
-            println!("     shimmytok: {:?}", shimmy_tokens);
-            println!("     llama.cpp: {:?}", llama_tokens);
+            println!("     shimmytok: {shimmy_tokens:?}");
+            println!("     llama.cpp: {llama_tokens:?}");
             failed += 1;
         }
     }
@@ -176,12 +176,12 @@ fn test_starcoder_validation() {
 }
 
 #[test]
-#[ignore]
+#[ignore = "Requires model file"]
 fn test_deepseek_coder_validation() {
     let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/deepseek-coder-6.7b-instruct.Q4_K_M.gguf";
     
     if !std::path::Path::new(&model_path).exists() {
-        println!("Skipping: model not found at {}", model_path);
+        println!("Skipping: model not found at {model_path}");
         return;
     }
 
@@ -200,12 +200,12 @@ fn test_deepseek_coder_validation() {
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
         
         if shimmy_tokens == llama_tokens {
-            println!("  ✅ MATCH: {:?}", shimmy_tokens);
+            println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;
         } else {
             println!("  ❌ MISMATCH:");
-            println!("     shimmytok: {:?}", shimmy_tokens);
-            println!("     llama.cpp: {:?}", llama_tokens);
+            println!("     shimmytok: {shimmy_tokens:?}");
+            println!("     llama.cpp: {llama_tokens:?}");
             failed += 1;
         }
     }
@@ -220,12 +220,12 @@ fn test_deepseek_coder_validation() {
 }
 
 #[test]
-#[ignore]
+#[ignore = "Requires model file"]
 fn test_deepseek_llm_validation() {
     let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/deepseek-llm-7b-chat.Q4_K_M.gguf";
     
     if !std::path::Path::new(&model_path).exists() {
-        println!("Skipping: model not found at {}", model_path);
+        println!("Skipping: model not found at {model_path}");
         return;
     }
 
@@ -244,12 +244,12 @@ fn test_deepseek_llm_validation() {
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
         
         if shimmy_tokens == llama_tokens {
-            println!("  ✅ MATCH: {:?}", shimmy_tokens);
+            println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;
         } else {
             println!("  ❌ MISMATCH:");
-            println!("     shimmytok: {:?}", shimmy_tokens);
-            println!("     llama.cpp: {:?}", llama_tokens);
+            println!("     shimmytok: {shimmy_tokens:?}");
+            println!("     llama.cpp: {llama_tokens:?}");
             failed += 1;
         }
     }
@@ -264,12 +264,12 @@ fn test_deepseek_llm_validation() {
 }
 
 #[test]
-#[ignore]
+#[ignore = "Requires model file"]
 fn test_phi2_validation() {
     let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/phi-2.Q4_K_M.gguf";
     
     if !std::path::Path::new(&model_path).exists() {
-        println!("Skipping: model not found at {}", model_path);
+        println!("Skipping: model not found at {model_path}");
         return;
     }
 
@@ -288,12 +288,12 @@ fn test_phi2_validation() {
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
         
         if shimmy_tokens == llama_tokens {
-            println!("  ✅ MATCH: {:?}", shimmy_tokens);
+            println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;
         } else {
             println!("  ❌ MISMATCH:");
-            println!("     shimmytok: {:?}", shimmy_tokens);
-            println!("     llama.cpp: {:?}", llama_tokens);
+            println!("     shimmytok: {shimmy_tokens:?}");
+            println!("     llama.cpp: {llama_tokens:?}");
             failed += 1;
         }
     }

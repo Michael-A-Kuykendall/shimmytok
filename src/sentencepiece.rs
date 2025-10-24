@@ -1,4 +1,4 @@
-//! SentencePiece tokenizer implementation
+//! `SentencePiece` tokenizer implementation
 //! Direct port of llama.cpp's algorithm including resegment
 
 use crate::{TokenId, TokenizerImpl, Vocabulary};
@@ -68,6 +68,7 @@ impl Default for SentencePieceTokenizer {
 }
 
 impl SentencePieceTokenizer {
+    #[must_use] 
     pub fn new() -> Self {
         Self
     }
@@ -89,10 +90,10 @@ impl TokenizerImpl for SentencePieceTokenizer {
         }
 
         // Add space prefix for SentencePiece (replacing spaces with ▁)
-        let processed_text = if !text.starts_with(' ') {
-            format!("▁{}", text.replace(' ', "▁"))
-        } else {
+        let processed_text = if text.starts_with(' ') {
             text.replace(' ', "▁")
+        } else {
+            format!("▁{}", text.replace(' ', "▁"))
         };
 
         // Validate processed size (Issue R3#10) - ▁ is 3 bytes UTF-8
@@ -112,8 +113,7 @@ impl TokenizerImpl for SentencePieceTokenizer {
         while let Some((byte_pos, _ch)) = char_indices.next() {
             let next_pos = char_indices
                 .peek()
-                .map(|(pos, _)| *pos)
-                .unwrap_or(processed_text.len());
+                .map_or(processed_text.len(), |(pos, _)| *pos);
             let len = next_pos - byte_pos;
 
             let prev = if index == 0 { None } else { Some(index - 1) };
@@ -159,8 +159,7 @@ impl TokenizerImpl for SentencePieceTokenizer {
             // Check limit BEFORE doing work (Issue R3#3)
             if iterations >= max_iterations {
                 return Err(crate::Error::TokenizationFailed(format!(
-                    "SentencePiece merge iteration limit exceeded: {} iterations (max: {})",
-                    iterations, max_iterations
+                    "SentencePiece merge iteration limit exceeded: {iterations} iterations (max: {max_iterations})"
                 )));
             }
             iterations += 1;
@@ -272,8 +271,7 @@ impl TokenizerImpl for SentencePieceTokenizer {
         for &token_id in tokens {
             if vocab.get_token_text(token_id).is_none() {
                 return Err(crate::Error::InvalidToken(format!(
-                    "Token ID {} not found in vocabulary",
-                    token_id
+                    "Token ID {token_id} not found in vocabulary"
                 )));
             }
         }

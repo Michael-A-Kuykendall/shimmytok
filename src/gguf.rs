@@ -42,8 +42,7 @@ pub fn load_metadata<P: AsRef<Path>>(path: P) -> Result<GGUFMetadata, Error> {
     // Support both version 2 and 3 (GPT-2 uses v3)
     if !(2..=3).contains(&version) {
         return Err(Error::InvalidMetadata(format!(
-            "Unsupported GGUF version: {} (only versions 2-3 are supported)",
-            version
+            "Unsupported GGUF version: {version} (only versions 2-3 are supported)"
         )));
     }
 
@@ -203,16 +202,14 @@ fn read_string<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Strin
     // Prevent truncation on 32-bit systems (Issue R4#12)
     if len_u64 > usize::MAX as u64 {
         return Err(Error::InvalidMetadata(format!(
-            "String length {} exceeds platform limit",
-            len_u64
+            "String length {len_u64} exceeds platform limit"
         )));
     }
     let len = len_u64 as usize;
 
     if len > MAX_STRING_SIZE {
         return Err(Error::InvalidMetadata(format!(
-            "String too large: {} bytes (max: {})",
-            len, MAX_STRING_SIZE
+            "String too large: {len} bytes (max: {MAX_STRING_SIZE})"
         )));
     }
 
@@ -229,7 +226,7 @@ fn read_string<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Strin
 
     let mut buf = vec![0u8; len];
     reader.read_exact(&mut buf)?;
-    String::from_utf8(buf).map_err(|e| Error::InvalidMetadata(format!("Invalid UTF-8: {}", e)))
+    String::from_utf8(buf).map_err(|e| Error::InvalidMetadata(format!("Invalid UTF-8: {e}")))
 }
 
 fn read_value<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Value, Error> {
@@ -276,14 +273,12 @@ fn read_value<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Value,
                     Ok(Value::StringArray(arr))
                 }
                 _ => Err(Error::InvalidMetadata(format!(
-                    "Unsupported array type: {}",
-                    array_type
+                    "Unsupported array type: {array_type}"
                 ))),
             }
         }
         _ => Err(Error::InvalidMetadata(format!(
-            "Unsupported value type: {}",
-            type_id
+            "Unsupported value type: {type_id}"
         ))),
     }
 }

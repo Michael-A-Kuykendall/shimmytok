@@ -47,12 +47,12 @@ fn test_detailed_merge() {
         let tokens = tokenizer.encode(text, false).unwrap();
 
         println!("\nFinal result:");
-        println!("  Input: '{}'", text);
-        println!("  Tokens: {:?}", tokens);
+        println!("  Input: '{text}'");
+        println!("  Tokens: {tokens:?}");
 
         for &id in &tokens {
             if let Some(text) = vocab.get_token_text(id) {
-                println!("    {} -> '{}'", id, text);
+                println!("    {id} -> '{text}'");
             }
         }
 

@@ -28,7 +28,7 @@ fn test_against_llama_cpp() {
     for test_text in &test_cases {
         // Get llama.cpp output
         let output = Command::new(llama_tokenize)
-            .args(&["-m", model_path, "--prompt", test_text, "--no-bos"])
+            .args(["-m", model_path, "--prompt", test_text, "--no-bos"])
             .output()
             .expect("Failed to run llama-tokenize");
 
@@ -48,12 +48,12 @@ fn test_against_llama_cpp() {
         let our_tokens = tokenizer.encode(test_text, false).unwrap();
 
         // Compare
-        if our_tokens != llama_tokens {
-            println!("MISMATCH for '{}':", test_text);
-            println!("  llama.cpp: {:?}", llama_tokens);
-            println!("  shimmytok: {:?}", our_tokens);
+        if our_tokens == llama_tokens {
+            println!("✓ MATCH for '{test_text}': {our_tokens:?}");
         } else {
-            println!("✓ MATCH for '{}': {:?}", test_text, our_tokens);
+            println!("MISMATCH for '{test_text}':");
+            println!("  llama.cpp: {llama_tokens:?}");
+            println!("  shimmytok: {our_tokens:?}");
         }
     }
 }

@@ -4,9 +4,7 @@ use std::path::Path;
 
 fn get_model_path() -> String {
     std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .map(|home| format!("{}/.cache/models/gguf/gpt2.Q4_K_M.gguf", home))
-        .unwrap_or_else(|_| "gpt2.Q4_K_M.gguf".to_string())
+        .or_else(|_| std::env::var("USERPROFILE")).map_or_else(|_| "gpt2.Q4_K_M.gguf".to_string(), |home| format!("{home}/.cache/models/gguf/gpt2.Q4_K_M.gguf"))
 }
 
 #[test]
@@ -14,8 +12,7 @@ fn test_empty_string() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_empty_string: model not found at {}",
-            model_path
+            "Skipping test_empty_string: model not found at {model_path}"
         );
         return;
     }
@@ -33,8 +30,7 @@ fn test_single_char() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_single_char: model not found at {}",
-            model_path
+            "Skipping test_single_char: model not found at {model_path}"
         );
         return;
     }
@@ -52,8 +48,7 @@ fn test_unicode_emoji() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_unicode_emoji: model not found at {}",
-            model_path
+            "Skipping test_unicode_emoji: model not found at {model_path}"
         );
         return;
     }
@@ -73,8 +68,7 @@ fn test_unicode_cjk() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_unicode_cjk: model not found at {}",
-            model_path
+            "Skipping test_unicode_cjk: model not found at {model_path}"
         );
         return;
     }
@@ -96,8 +90,7 @@ fn test_special_chars() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_special_chars: model not found at {}",
-            model_path
+            "Skipping test_special_chars: model not found at {model_path}"
         );
         return;
     }
@@ -116,8 +109,7 @@ fn test_long_string() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_long_string: model not found at {}",
-            model_path
+            "Skipping test_long_string: model not found at {model_path}"
         );
         return;
     }
@@ -139,8 +131,7 @@ fn test_newlines_and_tabs() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_newlines_and_tabs: model not found at {}",
-            model_path
+            "Skipping test_newlines_and_tabs: model not found at {model_path}"
         );
         return;
     }
@@ -159,8 +150,7 @@ fn test_multiple_spaces() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_multiple_spaces: model not found at {}",
-            model_path
+            "Skipping test_multiple_spaces: model not found at {model_path}"
         );
         return;
     }

@@ -15,8 +15,7 @@ fn bench_encode(c: &mut Criterion) {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping encode benchmarks: model not found at {}",
-            model_path
+            "Skipping encode benchmarks: model not found at {model_path}"
         );
         return;
     }
@@ -25,7 +24,7 @@ fn bench_encode(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("encode");
 
-    for size in [10, 100, 1000].iter() {
+    for size in &[10, 100, 1000] {
         let text = "Hello world ".repeat(*size);
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             b.iter(|| tokenizer.encode(black_box(&text), false));
@@ -38,8 +37,7 @@ fn bench_decode(c: &mut Criterion) {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping decode benchmarks: model not found at {}",
-            model_path
+            "Skipping decode benchmarks: model not found at {model_path}"
         );
         return;
     }
@@ -59,8 +57,7 @@ fn bench_load(c: &mut Criterion) {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping load benchmarks: model not found at {}",
-            model_path
+            "Skipping load benchmarks: model not found at {model_path}"
         );
         return;
     }
@@ -74,8 +71,7 @@ fn bench_encode_batch(c: &mut Criterion) {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping batch benchmarks: model not found at {}",
-            model_path
+            "Skipping batch benchmarks: model not found at {model_path}"
         );
         return;
     }
@@ -84,11 +80,11 @@ fn bench_encode_batch(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("encode_batch");
 
-    for batch_size in [1, 10, 100].iter() {
+    for batch_size in &[1, 10, 100] {
         let texts: Vec<String> = (0..*batch_size)
-            .map(|i| format!("This is test string number {} with some content", i))
+            .map(|i| format!("This is test string number {i} with some content"))
             .collect();
-        let text_refs: Vec<&str> = texts.iter().map(|s| s.as_str()).collect();
+        let text_refs: Vec<&str> = texts.iter().map(std::string::String::as_str).collect();
 
         group.bench_with_input(
             BenchmarkId::from_parameter(batch_size),

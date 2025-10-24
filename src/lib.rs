@@ -30,11 +30,11 @@
 //!
 //! ## Supported Models
 //!
-//! - ✅ LLaMA / Llama-2 / Llama-3 (SentencePiece)
-//! - ✅ Mistral (SentencePiece)
-//! - ✅ Phi-3 (SentencePiece)
+//! - ✅ `LLaMA` / Llama-2 / Llama-3 (`SentencePiece`)
+//! - ✅ Mistral (`SentencePiece`)
+//! - ✅ Phi-3 (`SentencePiece`)
 //! - ✅ Qwen / Qwen2 (BPE)
-//! - ✅ Gemma (SentencePiece)
+//! - ✅ Gemma (`SentencePiece`)
 //! - ✅ GPT-2 / GPT-3 style BPE
 
 use rayon::prelude::*;
@@ -58,8 +58,8 @@ pub const MAX_OUTPUT_TOKENS: usize = 1_000_000;
 /// Type alias for token IDs
 ///
 /// Token IDs are represented as u32 to match GGUF format and llama.cpp implementation.
-/// This is safe because vocabulary size is limited to MAX_VOCAB_SIZE (1M tokens),
-/// which is well below u32::MAX (4.2B). (Issue R2#10)
+/// This is safe because vocabulary size is limited to `MAX_VOCAB_SIZE` (1M tokens),
+/// which is well below `u32::MAX` (4.2B). (Issue R2#10)
 pub type TokenId = u32;
 
 /// Main tokenizer interface for encoding and decoding text
@@ -215,6 +215,7 @@ impl Tokenizer {
     /// # Returns
     ///
     /// The total number of tokens in the vocabulary.
+    #[must_use] 
     pub fn vocab_size(&self) -> usize {
         self.vocab.n_tokens()
     }
@@ -224,6 +225,7 @@ impl Tokenizer {
     /// # Returns
     ///
     /// The token ID used to mark the beginning of a sequence.
+    #[must_use] 
     pub fn bos_token(&self) -> TokenId {
         self.vocab.bos_token_id()
     }
@@ -233,6 +235,7 @@ impl Tokenizer {
     /// # Returns
     ///
     /// The token ID used to mark the end of a sequence.
+    #[must_use] 
     pub fn eos_token(&self) -> TokenId {
         self.vocab.eos_token_id()
     }
@@ -256,6 +259,7 @@ impl Tokenizer {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use] 
     pub fn model_type(&self) -> &str {
         self.vocab.model_type()
     }
@@ -376,7 +380,7 @@ impl Tokenizer {
         self.vocab
             .get_token_text(token)
             .map(String::from)
-            .ok_or_else(|| Error::InvalidToken(format!("Token ID {} out of range", token)))
+            .ok_or_else(|| Error::InvalidToken(format!("Token ID {token} out of range")))
     }
 
     /// Get the type of a token
@@ -403,6 +407,7 @@ impl Tokenizer {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use] 
     pub fn token_type(&self, token: TokenId) -> TokenType {
         if token >= self.vocab.n_tokens() as TokenId {
             return TokenType::Undefined;
@@ -434,6 +439,7 @@ impl Tokenizer {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use] 
     pub fn is_special_token(&self, token: TokenId) -> bool {
         if token >= self.vocab.n_tokens() as TokenId {
             return false;

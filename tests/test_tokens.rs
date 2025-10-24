@@ -14,25 +14,25 @@ fn test_vocabulary_loading() {
         for i in 0..100 {
             if let Some(text) = vocab.get_token_text(i) {
                 if text.contains("Hello") || text.contains("hello") {
-                    println!("Token {}: '{}'", i, text);
+                    println!("Token {i}: '{text}'");
                 }
             }
         }
 
         // Check if " Hello" exists (with space prefix)
         if let Some(id) = vocab.get_token_id(" Hello") {
-            println!("' Hello' = token {}", id);
+            println!("' Hello' = token {id}");
         }
 
         if let Some(id) = vocab.get_token_id("Hello") {
-            println!("'Hello' = token {}", id);
+            println!("'Hello' = token {id}");
         }
 
         // Look for larger token indices
         for i in 15000..15100 {
             if let Some(text) = vocab.get_token_text(i) {
                 if text.contains("Hello") || text.contains("hello") {
-                    println!("Token {}: '{}'", i, text);
+                    println!("Token {i}: '{text}'");
                 }
             }
         }

@@ -10,11 +10,11 @@ fn test_merge_sequence() {
         // Simulate what should happen
         let text = "Hello world";
         let processed = format!("▁{}", text.replace(' ', "▁"));
-        println!("Processed text: '{}'", processed);
+        println!("Processed text: '{processed}'");
 
         // Characters after splitting
         let chars: Vec<String> = processed.chars().map(|c| c.to_string()).collect();
-        println!("Initial chars: {:?}", chars);
+        println!("Initial chars: {chars:?}");
 
         // Check all possible bigrams and their scores
         println!("\nPossible bigrams from initial state:");

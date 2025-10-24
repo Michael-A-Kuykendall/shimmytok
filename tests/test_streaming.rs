@@ -15,8 +15,7 @@ fn test_decode_single() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_decode_single: model not found at {}",
-            model_path
+            "Skipping test_decode_single: model not found at {model_path}"
         );
         return;
     }
@@ -48,8 +47,7 @@ fn test_decode_single_with_special_tokens() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_decode_single_with_special_tokens: model not found at {}",
-            model_path
+            "Skipping test_decode_single_with_special_tokens: model not found at {model_path}"
         );
         return;
     }
@@ -76,8 +74,7 @@ fn test_token_to_piece() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_token_to_piece: model not found at {}",
-            model_path
+            "Skipping test_token_to_piece: model not found at {model_path}"
         );
         return;
     }
@@ -104,8 +101,7 @@ fn test_token_type() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_token_type: model not found at {}",
-            model_path
+            "Skipping test_token_type: model not found at {model_path}"
         );
         return;
     }
@@ -114,14 +110,14 @@ fn test_token_type() {
 
     // BOS token should be Control or similar
     let bos_type = tokenizer.token_type(tokenizer.bos_token());
-    println!("BOS token type: {:?}", bos_type);
+    println!("BOS token type: {bos_type:?}");
 
     // Regular tokens should be Normal or similar
     let text = "Hello";
     let tokens = tokenizer.encode(text, false).unwrap();
     for &token in &tokens {
         let token_type = tokenizer.token_type(token);
-        println!("Token {} type: {:?}", token, token_type);
+        println!("Token {token} type: {token_type:?}");
     }
 
     // Invalid token should return Undefined
@@ -139,8 +135,7 @@ fn test_is_special_token() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_is_special_token: model not found at {}",
-            model_path
+            "Skipping test_is_special_token: model not found at {model_path}"
         );
         return;
     }
@@ -183,8 +178,7 @@ fn test_streaming_simulation() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_streaming_simulation: model not found at {}",
-            model_path
+            "Skipping test_streaming_simulation: model not found at {model_path}"
         );
         return;
     }

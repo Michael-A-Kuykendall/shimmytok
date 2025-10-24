@@ -11,7 +11,7 @@ fn test_starcoder_sequential() {
     let regex1 = Regex::new(pattern1).unwrap();
     let regex2 = Regex::new(pattern2).unwrap();
     
-    println!("\n=== Input: {:?} ===", text);
+    println!("\n=== Input: {text:?} ===");
     
     // Apply first pattern
     println!("\n=== Pattern 1: \\p{{N}} (digits only) ===");
@@ -21,10 +21,10 @@ fn test_starcoder_sequential() {
     for (start, end) in offsets {
         let fragment = &text[start..end];
         
-        let matches: Vec<_> = regex1.find_iter(fragment).filter_map(|m| m.ok()).collect();
+        let matches: Vec<_> = regex1.find_iter(fragment).filter_map(std::result::Result::ok).collect();
         
         if matches.is_empty() {
-            println!("  No matches in fragment, keeping {}..{}", start, end);
+            println!("  No matches in fragment, keeping {start}..{end}");
             new_offsets.push((start, end));
         } else {
             let mut last_pos = 0;
@@ -45,7 +45,7 @@ fn test_starcoder_sequential() {
     }
     
     offsets = new_offsets;
-    println!("\nOffsets after pattern 1: {:?}", offsets);
+    println!("\nOffsets after pattern 1: {offsets:?}");
     println!("Fragments: {:?}", offsets.iter().map(|(s, e)| &text[*s..*e]).collect::<Vec<_>>());
     
     // Apply second pattern
@@ -55,7 +55,7 @@ fn test_starcoder_sequential() {
         let fragment = &text[start..end];
         let mut has_matches = false;
         
-        println!("\nProcessing fragment {:?} ({}..{})", fragment, start, end);
+        println!("\nProcessing fragment {fragment:?} ({start}..{end})");
         for m in regex2.find_iter(fragment) {
             let m = m.unwrap();
             has_matches = true;
@@ -70,8 +70,8 @@ fn test_starcoder_sequential() {
     }
     
     offsets = new_offsets;
-    println!("\n=== Final offsets: {:?} ===", offsets);
+    println!("\n=== Final offsets: {offsets:?} ===");
     let fragments: Vec<String> = offsets.iter().map(|(s, e)| text[*s..*e].to_string()).collect();
-    println!("Final fragments: {:?}", fragments);
+    println!("Final fragments: {fragments:?}");
     println!("Count: {}", fragments.len());
 }

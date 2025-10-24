@@ -11,7 +11,7 @@ fn test_load_gguf() {
 
     for path in &paths {
         if std::path::Path::new(path).exists() {
-            println!("Testing with: {}", path);
+            println!("Testing with: {path}");
 
             match Tokenizer::from_gguf_file(path) {
                 Ok(tokenizer) => {
@@ -29,20 +29,20 @@ fn test_load_gguf() {
                             // Try to decode back
                             match tokenizer.decode(&tokens, false) {
                                 Ok(decoded) => {
-                                    println!("  Decoded back to: '{}'", decoded);
+                                    println!("  Decoded back to: '{decoded}'");
                                 }
                                 Err(e) => {
-                                    println!("  Decode failed: {}", e);
+                                    println!("  Decode failed: {e}");
                                 }
                             }
                         }
                         Err(e) => {
-                            println!("  Encode failed: {}", e);
+                            println!("  Encode failed: {e}");
                         }
                     }
                 }
                 Err(e) => {
-                    println!("  Failed to load: {}", e);
+                    println!("  Failed to load: {e}");
                 }
             }
 
@@ -62,8 +62,7 @@ fn test_encode_batch() {
 
     if !std::path::Path::new(&model_path).exists() {
         eprintln!(
-            "Skipping test_encode_batch: model not found at {}",
-            model_path
+            "Skipping test_encode_batch: model not found at {model_path}"
         );
         return;
     }
@@ -76,6 +75,6 @@ fn test_encode_batch() {
     // Verify matches sequential
     for (i, text) in texts.iter().enumerate() {
         let sequential = tokenizer.encode(text, false).unwrap();
-        assert_eq!(batch[i], sequential, "Batch mismatch for: {}", text);
+        assert_eq!(batch[i], sequential, "Batch mismatch for: {text}");
     }
 }

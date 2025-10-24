@@ -59,6 +59,7 @@ impl Default for BPETokenizer {
 }
 
 impl BPETokenizer {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
@@ -177,7 +178,7 @@ impl BPETokenizer {
         let mut cache = self
             .regex_cache
             .lock()
-            .map_err(|e| format!("Mutex lock failed: {}", e))?;
+            .map_err(|e| format!("Mutex lock failed: {e}"))?;
 
         if let Some(regexes) = cache.get(pre_type) {
             return Ok(regexes.clone());
@@ -187,7 +188,7 @@ impl BPETokenizer {
         let mut regexes = Vec::new();
         for pattern in patterns {
             let regex = fancy_regex::Regex::new(pattern)
-                .map_err(|e| format!("Failed to compile regex for '{}': {}", pre_type, e))?;
+                .map_err(|e| format!("Failed to compile regex for '{pre_type}': {e}"))?;
             regexes.push(regex);
         }
 
@@ -204,7 +205,7 @@ impl BPETokenizer {
             // Fast path for single-pattern models (most common)
             return Ok(regexes[0]
                 .find_iter(text)
-                .filter_map(|m| m.ok())
+                .filter_map(std::result::Result::ok)
                 .map(|m| m.as_str().to_string())
                 .collect());
         }
@@ -222,7 +223,7 @@ impl BPETokenizer {
                 // Collect all matches in this fragment
                 let matches: Vec<_> = regex
                     .find_iter(fragment)
-                    .filter_map(|m| m.ok())
+                    .filter_map(std::result::Result::ok)
                     .collect();
                 
                 if matches.is_empty() {
@@ -258,7 +259,7 @@ impl BPETokenizer {
     }
 
     /// Apply BPE to a single text fragment
-    /// Direct port of llama.cpp llm_tokenizer_bpe_session::tokenize
+    /// Direct port of llama.cpp `llm_tokenizer_bpe_session::tokenize`
     fn bpe_fragment(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
         // Text is a single word from regex pre-tokenization
         // llama.cpp initializes with UTF-8 characters as symbols
@@ -329,29 +330,25 @@ impl BPETokenizer {
             if let Some(&expected_rank) =
                 merge_ranks.get(&(left_text.to_string(), right_text.to_string()))
             {
-                if expected_rank != bigram.rank {
-                    continue;
+                if expected_rank == bigram.rank {
+                    // Merge: extend left symbol to include right symbol
+                    symbols[left].text_len += symbols[right].text_len;
+                    symbols[right].text_len = 0; // Mark right as deleted
+
+                    // Update linked list
+                    symbols[left].next = symbols[right].next;
+                    if let Some(next) = symbols[right].next {
+                        symbols[next].prev = Some(left);
+                    }
+
+                    // Add new potential merges with neighbors
+                    if let Some(prev) = symbols[left].prev {
+                        self.try_add_bigram(prev, left, text, &symbols, &merge_ranks, &mut work_queue);
+                    }
+                    if let Some(next) = symbols[left].next {
+                        self.try_add_bigram(left, next, text, &symbols, &merge_ranks, &mut work_queue);
+                    }
                 }
-            } else {
-                continue;
-            }
-
-            // Merge: extend left symbol to include right symbol
-            symbols[left].text_len += symbols[right].text_len;
-            symbols[right].text_len = 0; // Mark right as deleted
-
-            // Update linked list
-            symbols[left].next = symbols[right].next;
-            if let Some(next) = symbols[right].next {
-                symbols[next].prev = Some(left);
-            }
-
-            // Add new potential merges with neighbors
-            if let Some(prev) = symbols[left].prev {
-                self.try_add_bigram(prev, left, text, &symbols, &merge_ranks, &mut work_queue);
-            }
-            if let Some(next) = symbols[left].next {
-                self.try_add_bigram(left, next, text, &symbols, &merge_ranks, &mut work_queue);
             }
         }
 
@@ -405,7 +402,7 @@ impl BPETokenizer {
                 left,
                 right,
                 rank,
-                text: format!("{}{}", left_text, right_text),
+                text: format!("{left_text}{right_text}"),
             });
         }
     }
@@ -423,7 +420,7 @@ impl BPETokenizer {
 
         // Pre-tokenize ORIGINAL text (not byte-encoded) into fragments
         let fragments = self.pre_tokenize(text, vocab).map_err(|e| {
-            crate::Error::TokenizationFailed(format!("Pre-tokenization failed: {}", e))
+            crate::Error::TokenizationFailed(format!("Pre-tokenization failed: {e}"))
         })?;
 
         // Apply BPE to each fragment (after byte-encoding)
@@ -452,8 +449,7 @@ impl BPETokenizer {
         for &id in tokens {
             if vocab.get_token_text(id).is_none() {
                 return Err(crate::Error::InvalidToken(format!(
-                    "Token ID {} not found in vocabulary",
-                    id
+                    "Token ID {id} not found in vocabulary"
                 )));
             }
         }

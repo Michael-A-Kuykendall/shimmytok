@@ -12,12 +12,12 @@ fn test_debug_tokens() {
         let text = "Hello world";
         let tokens = tokenizer.encode(text, false).unwrap();
 
-        println!("Input: '{}'", text);
-        println!("Tokens: {:?}", tokens);
+        println!("Input: '{text}'");
+        println!("Tokens: {tokens:?}");
 
         for &id in &tokens {
             if let Some(text) = vocab.get_token_text(id) {
-                println!("  {} -> '{}'", id, text);
+                println!("  {id} -> '{text}'");
             }
         }
 
@@ -25,13 +25,13 @@ fn test_debug_tokens() {
         println!("\nLlama.cpp tokens:");
         for id in [15043, 3186] {
             if let Some(text) = vocab.get_token_text(id) {
-                println!("  {} -> '{}'", id, text);
+                println!("  {id} -> '{text}'");
             }
         }
 
         // Check if "▁world" exists
         if let Some(id) = vocab.get_token_id("▁world") {
-            println!("\n'▁world' = token {}", id);
+            println!("\n'▁world' = token {id}");
         }
 
         // Search for world-related tokens
@@ -39,7 +39,7 @@ fn test_debug_tokens() {
         for i in 3180..3195 {
             if let Some(text) = vocab.get_token_text(i) {
                 if text.contains("world") || text.contains("World") {
-                    println!("  {} -> '{}'", i, text);
+                    println!("  {i} -> '{text}'");
                 }
             }
         }

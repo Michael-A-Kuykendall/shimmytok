@@ -6,8 +6,8 @@ fn test_gpt2_pattern_multiline() {
     let regex = Regex::new(pattern).unwrap();
     let text = "Multiple\nlines\nof\ntext";
     
-    println!("Input: {:?}", text);
-    println!("Pattern: {}", pattern);
+    println!("Input: {text:?}");
+    println!("Pattern: {pattern}");
     
     for m in regex.find_iter(text) {
         let m = m.unwrap();
@@ -16,11 +16,11 @@ fn test_gpt2_pattern_multiline() {
     
     let matches: Vec<_> = regex
         .find_iter(text)
-        .filter_map(|m| m.ok())
+        .filter_map(std::result::Result::ok)
         .map(|m| m.as_str())
         .collect();
     
-    println!("Total matches: {:?}", matches);
+    println!("Total matches: {matches:?}");
     
     // The pattern should match "Multiple", "\n", "lines", "\n", "of", "\n", "text"
     assert_eq!(matches.len(), 7, "Should get 7 fragments");
