@@ -1,4 +1,22 @@
-//! GGUF vocabulary loading and management
+//! Vocabulary loading and management from GGUF model files.
+//!
+//! This module handles:
+//! - Loading token strings, scores, and types from GGUF metadata
+//! - Managing BPE merge rules
+//! - Providing token lookup (text → ID, ID → text)
+//! - Tracking special tokens (BOS, EOS, UNK, etc.)
+//!
+//! # Validation
+//! Performs safety checks at load time:
+//! - Max vocab size: 1M tokens
+//! - Max token length: 1KB per token
+//! - Validates all arrays have consistent length
+//!
+//! # Special Token Handling
+//! Supports llama.cpp's special token conventions:
+//! - `<s>`, `</s>`: Beginning/end of sequence
+//! - `<unk>`: Unknown token fallback
+//! - Model-specific tokens via metadata
 
 use crate::{Error, TokenId};
 use std::collections::HashMap;

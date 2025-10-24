@@ -1,5 +1,27 @@
-//! `SentencePiece` tokenizer implementation
-//! Direct port of llama.cpp's algorithm including resegment
+//! SentencePiece tokenizer implementation with resegmentation support.
+//!
+//! This module implements the SentencePiece Unigram algorithm as used by llama.cpp,
+//! including the critical resegmentation step that handles character normalization.
+//!
+//! # Algorithm Overview
+//! 1. **Text Normalization**: Convert input text to NFD (decomposed) form
+//! 2. **Resegmentation**: Split normalized text using vocabulary tokens (longest-match)
+//! 3. **Symbol Merging**: Merge adjacent symbols using score-based priority queue
+//! 4. **Token Lookup**: Convert final symbols to token IDs
+//!
+//! # Resegmentation
+//! CRITICAL: The resegmentation step (lines 94-153) implements vocabulary-aware splitting.
+//! Instead of character-by-character initialization, it greedily matches the longest
+//! vocabulary tokens. This is essential for models like Llama-3 that use SentencePiece.
+//!
+//! # Model Support
+//! - Llama / Llama-2 / Llama-3
+//! - Mistral / Mixtral
+//! - Phi-3
+//! - Gemma
+//!
+//! # Reference
+//! llama.cpp `llm_tokenizer_spm_session::tokenize()` lines 821-1026
 
 use crate::{TokenId, TokenizerImpl, Vocabulary};
 use std::cmp::Ordering;
