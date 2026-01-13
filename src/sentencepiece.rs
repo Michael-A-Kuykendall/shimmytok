@@ -112,10 +112,17 @@ impl TokenizerImpl for SentencePieceTokenizer {
         }
 
         // Add space prefix for SentencePiece (replacing spaces with ▁)
-        let processed_text = if text.starts_with(' ') {
-            text.replace(' ', "▁")
+        // Honor the add_space_prefix flag from GGUF metadata (llama.cpp parity)
+        let processed_text = if vocab.add_space_prefix() {
+            // Add leading ▁ if not already starting with space
+            if text.starts_with(' ') {
+                text.replace(' ', "▁")
+            } else {
+                format!("▁{}", text.replace(' ', "▁"))
+            }
         } else {
-            format!("▁{}", text.replace(' ', "▁"))
+            // Don't add leading space, just replace internal spaces
+            text.replace(' ', "▁")
         };
 
         // Validate processed size (Issue R3#10) - ▁ is 3 bytes UTF-8
@@ -298,25 +305,45 @@ impl TokenizerImpl for SentencePieceTokenizer {
             }
         }
 
-        let mut result = String::new();
+        let mut bytes = Vec::new();
         const MAX_DECODE_SIZE: usize = 100 * 1024 * 1024; // 100MB (Issue #10)
 
         for &token_id in tokens {
             if let Some(text) = vocab.get_token_text(token_id) {
+                // Check if this is a byte token like <0x0A>
+                if let Some(byte_val) = decode_byte_token(text) {
+                    bytes.push(byte_val);
+                } else {
+                    // Regular token - replace ▁ with space and append bytes
+                    let normalized = text.replace('▁', " ");
+                    bytes.extend(normalized.as_bytes());
+                }
+
                 // Check size before growing
-                if result.len() + text.len() > MAX_DECODE_SIZE {
+                if bytes.len() > MAX_DECODE_SIZE {
                     return Err(crate::Error::TokenizationFailed(format!(
                         "Decoded text would exceed max size: {} bytes (max: {})",
-                        result.len() + text.len(),
+                        bytes.len(),
                         MAX_DECODE_SIZE
                     )));
                 }
-                result.push_str(text);
             }
         }
 
-        // Replace sentencepiece meta-symbol
-        Ok(result.replace('▁', " "))
+        // Convert bytes to string (lossy for invalid UTF-8)
+        Ok(String::from_utf8_lossy(&bytes).into_owned())
+    }
+}
+
+/// Decode a byte token like `<0x0A>` to its byte value.
+/// Returns None if the token is not a valid byte token.
+fn decode_byte_token(text: &str) -> Option<u8> {
+    // Format: <0xXX> where XX is a hex value
+    if text.len() == 6 && text.starts_with("<0x") && text.ends_with('>') {
+        let hex = &text[3..5];
+        u8::from_str_radix(hex, 16).ok()
+    } else {
+        None
     }
 }
 

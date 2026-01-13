@@ -1,0 +1,5 @@
+{"model": "llama-spm", "tests": [
+{"prompt": "Hello world", "tokens": 
+[15043, 3186]
+},
+{"prompt": "The quick brown fox", "tokens": 

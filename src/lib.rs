@@ -43,10 +43,18 @@ use std::path::Path;
 pub mod bpe;
 pub mod byte_encoder;
 pub mod gguf;
+pub mod plamo2;
+pub mod rwkv;
 pub mod sentencepiece;
+pub mod ugm;
 pub mod vocab;
+pub mod wpm;
 
 pub use vocab::{TokenType, Vocabulary};
+pub use wpm::WpmTokenizer;
+pub use rwkv::RwkvTokenizer;
+pub use ugm::UgmTokenizer;
+pub use plamo2::Plamo2Tokenizer;
 
 /// Token ID type used throughout the library
 /// Maximum input text size in bytes (10MB) - Issue R4#2
@@ -54,6 +62,68 @@ pub const MAX_INPUT_SIZE: usize = 10 * 1024 * 1024;
 
 /// Maximum output tokens (1M tokens max) - prevents memory exhaustion
 pub const MAX_OUTPUT_TOKENS: usize = 1_000_000;
+
+/// Options for encoding text (llama.cpp parity)
+#[derive(Debug, Clone, Default)]
+pub struct EncodeOptions {
+    /// Add BOS/EOS tokens according to model configuration
+    pub add_special_tokens: bool,
+    /// Parse special token strings in input (e.g., `<|eot_id|>`) and emit as tokens
+    pub parse_special: bool,
+}
+
+impl EncodeOptions {
+    /// Create options with add_special_tokens only (legacy behavior)
+    #[must_use]
+    pub fn with_special_tokens(add_special_tokens: bool) -> Self {
+        Self {
+            add_special_tokens,
+            parse_special: false,
+        }
+    }
+    
+    /// Create options that parse special tokens in input
+    #[must_use]
+    pub fn with_parse_special(add_special_tokens: bool, parse_special: bool) -> Self {
+        Self {
+            add_special_tokens,
+            parse_special,
+        }
+    }
+}
+
+/// Options for decoding tokens (llama.cpp parity)
+#[derive(Debug, Clone, Default)]
+pub struct DecodeOptions {
+    /// Skip special tokens (BOS, EOS, etc.) in output
+    pub skip_special_tokens: bool,
+    /// Strip leading whitespace from each token piece
+    pub lstrip: bool,
+    /// If false, emit empty string for special/control tokens instead of their text
+    pub include_special_text: bool,
+}
+
+impl DecodeOptions {
+    /// Create options with skip_special_tokens only (legacy behavior)
+    #[must_use]
+    pub fn with_skip_special(skip_special_tokens: bool) -> Self {
+        Self {
+            skip_special_tokens,
+            lstrip: false,
+            include_special_text: true,
+        }
+    }
+    
+    /// Create full decode options
+    #[must_use]
+    pub fn new(skip_special_tokens: bool, lstrip: bool, include_special_text: bool) -> Self {
+        Self {
+            skip_special_tokens,
+            lstrip,
+            include_special_text,
+        }
+    }
+}
 
 /// Type alias for token IDs
 ///
@@ -155,16 +225,66 @@ impl Tokenizer {
     /// ```
     #[must_use = "encode returns a Result that must be handled"]
     pub fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<TokenId>, Error> {
+        self.encode_with_options(text, &EncodeOptions::with_special_tokens(add_special_tokens))
+    }
+
+    /// Encode text into a sequence of token IDs with full options
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - The input text to tokenize
+    /// * `options` - Encoding options (add_special_tokens, parse_special)
+    ///
+    /// # Returns
+    ///
+    /// Returns a vector of token IDs representing the input text.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::{Tokenizer, EncodeOptions};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+    /// 
+    /// // Parse special tokens like <|eot_id|> in input
+    /// let opts = EncodeOptions::with_parse_special(true, true);
+    /// let tokens = tokenizer.encode_with_options("Hello<|eot_id|>World", &opts)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use = "encode_with_options returns a Result that must be handled"]
+    pub fn encode_with_options(&self, text: &str, options: &EncodeOptions) -> Result<Vec<TokenId>, Error> {
         let mut tokens = Vec::new();
 
-        if add_special_tokens && self.vocab.add_bos_token() {
+        if options.add_special_tokens && self.vocab.add_bos_token() {
             tokens.push(self.vocab.bos_token_id());
         }
 
-        let encoded = self.tokenizer_impl.encode(text, &self.vocab)?;
-        tokens.extend(encoded);
+        if options.parse_special {
+            // Build special token map and find occurrences in text
+            let special_map = self.vocab.special_token_map();
+            let fragments = split_on_special_tokens(text, &special_map);
+            
+            for fragment in fragments {
+                match fragment {
+                    TextFragment::Special(token_id) => {
+                        tokens.push(token_id);
+                    }
+                    TextFragment::Text(t) => {
+                        if !t.is_empty() {
+                            let encoded = self.tokenizer_impl.encode(&t, &self.vocab)?;
+                            tokens.extend(encoded);
+                        }
+                    }
+                }
+            }
+        } else {
+            let encoded = self.tokenizer_impl.encode(text, &self.vocab)?;
+            tokens.extend(encoded);
+        }
 
-        if add_special_tokens && self.vocab.add_eos_token() {
+        if options.add_special_tokens && self.vocab.add_eos_token() {
             tokens.push(self.vocab.eos_token_id());
         }
 
@@ -197,17 +317,82 @@ impl Tokenizer {
     /// ```
     #[must_use = "decode returns a Result that must be handled"]
     pub fn decode(&self, tokens: &[TokenId], skip_special_tokens: bool) -> Result<String, Error> {
-        let filtered_tokens = if skip_special_tokens {
+        self.decode_with_options(tokens, &DecodeOptions::with_skip_special(skip_special_tokens))
+    }
+
+    /// Decode a sequence of token IDs back into text with full options
+    ///
+    /// # Arguments
+    ///
+    /// * `tokens` - Slice of token IDs to decode
+    /// * `options` - Decoding options (skip_special_tokens, lstrip, include_special_text)
+    ///
+    /// # Returns
+    ///
+    /// Returns the decoded text as a String.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::{Tokenizer, DecodeOptions};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+    /// let tokens = vec![15043, 3186];
+    /// 
+    /// // Decode with lstrip to remove leading whitespace from tokens
+    /// let opts = DecodeOptions::new(true, true, false);
+    /// let text = tokenizer.decode_with_options(&tokens, &opts)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use = "decode_with_options returns a Result that must be handled"]
+    pub fn decode_with_options(&self, tokens: &[TokenId], options: &DecodeOptions) -> Result<String, Error> {
+        // Filter tokens based on options
+        let filtered_tokens: Vec<TokenId> = if options.skip_special_tokens {
             tokens
                 .iter()
                 .copied()
                 .filter(|&id| !self.vocab.is_special_token(id))
-                .collect::<Vec<_>>()
+                .collect()
         } else {
             tokens.to_vec()
         };
 
-        self.tokenizer_impl.decode(&filtered_tokens, &self.vocab)
+        // If we need special handling (lstrip or include_special_text=false), 
+        // we need to decode token by token
+        let mut result = if options.lstrip || !options.include_special_text {
+            let mut result = String::new();
+            for &token_id in &filtered_tokens {
+                // Skip special text if requested
+                if !options.include_special_text && self.vocab.is_special_token(token_id) {
+                    continue;
+                }
+
+                // Get the token piece
+                let piece = self.tokenizer_impl.decode(&[token_id], &self.vocab)?;
+                
+                // Apply lstrip if requested
+                let piece = if options.lstrip {
+                    piece.trim_start().to_string()
+                } else {
+                    piece
+                };
+
+                result.push_str(&piece);
+            }
+            result
+        } else {
+            // Standard decode path
+            self.tokenizer_impl.decode(&filtered_tokens, &self.vocab)?
+        };
+
+        // Apply clean_spaces post-processing if enabled in vocab (llama.cpp parity)
+        if self.vocab.clean_spaces() {
+            result = apply_clean_spaces(&result);
+        }
+
+        Ok(result)
     }
 
     /// Get the vocabulary size
@@ -448,6 +633,140 @@ impl Tokenizer {
     }
 }
 
+// ============================================================================
+// Helper types and functions for parse_special mode
+// ============================================================================
+
+/// Fragment of text during parse_special tokenization
+enum TextFragment {
+    /// A special token that should be emitted directly
+    Special(TokenId),
+    /// Regular text that needs normal tokenization
+    Text(String),
+}
+
+/// Split text on special token occurrences.
+/// Returns fragments in order: either special tokens or regular text chunks.
+fn split_on_special_tokens(
+    text: &str,
+    special_map: &std::collections::HashMap<String, TokenId>,
+) -> Vec<TextFragment> {
+    if special_map.is_empty() || text.is_empty() {
+        return vec![TextFragment::Text(text.to_string())];
+    }
+
+    // Sort special tokens by length descending (longest match first)
+    let mut special_tokens: Vec<_> = special_map.iter().collect();
+    special_tokens.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+
+    let mut result = Vec::new();
+    let mut remaining = text;
+
+    while !remaining.is_empty() {
+        // Try to match any special token at the start
+        let mut found = false;
+        for (token_str, &token_id) in &special_tokens {
+            if remaining.starts_with(token_str.as_str()) {
+                result.push(TextFragment::Special(token_id));
+                remaining = &remaining[token_str.len()..];
+                found = true;
+                break;
+            }
+        }
+
+        if !found {
+            // No special token at start - find the next special token
+            let mut next_special_pos = remaining.len();
+            for (token_str, _) in &special_tokens {
+                if let Some(pos) = remaining.find(token_str.as_str()) {
+                    if pos < next_special_pos {
+                        next_special_pos = pos;
+                    }
+                }
+            }
+
+            // Add text up to the next special token (or end)
+            let text_chunk = &remaining[..next_special_pos];
+            if !text_chunk.is_empty() {
+                result.push(TextFragment::Text(text_chunk.to_string()));
+            }
+            remaining = &remaining[next_special_pos..];
+        }
+    }
+
+    result
+}
+
+/// Apply llama.cpp clean_spaces post-processing to decoded text
+///
+/// This implements the cleanup passes from llama.cpp's detokenize function:
+/// 1. Remove space before punctuation: ` ?` → `?`, ` !` → `!`, ` .` → `.`, ` ,` → `,`
+/// 2. Strip single apostrophe between spaces: ` ' ` → `'`
+/// 3. Merge apostrophe contractions: ` 'm` → `'m`, ` 's` → `'s`, ` 've` → `'ve`, ` 're` → `'re`
+fn apply_clean_spaces(text: &str) -> String {
+    let mut chars: Vec<char> = text.chars().collect();
+    if chars.is_empty() {
+        return String::new();
+    }
+
+    // Pass 1: Remove space before punctuation ?!.,
+    let mut i = 1;
+    while i < chars.len() {
+        if chars[i - 1] == ' ' && matches!(chars[i], '?' | '!' | '.' | ',') {
+            chars.remove(i - 1);
+            // Don't increment i since we removed an element
+        } else {
+            i += 1;
+        }
+    }
+
+    // Pass 2: Strip single apostrophe between spaces: " ' " → "'"
+    let mut i = 1;
+    while i + 1 < chars.len() {
+        if chars[i] == '\'' && chars[i - 1] == ' ' && chars.get(i + 1) == Some(&' ') {
+            // Remove the space before the apostrophe
+            chars.remove(i - 1);
+            // Now apostrophe is at i-1, space is at i
+            chars.remove(i);
+            // Don't increment since we modified the array
+        } else {
+            i += 1;
+        }
+    }
+
+    // Pass 3: Apostrophe contractions - remove space before certain patterns
+    // ` 'm` → `'m`, ` 's` → `'s`, ` 've` → `'ve`, ` 're` → `'re`
+    let mut i = 1;
+    while i + 1 < chars.len() {
+        if chars[i - 1] == ' ' && chars[i] == '\'' {
+            let next = chars.get(i + 1);
+            let next2 = chars.get(i + 2);
+
+            let should_remove_space = match (next, next2) {
+                // ` 's`, ` 'm`
+                (Some('s'), _) | (Some('m'), _) => true,
+                // ` 've`, ` 're`
+                (Some('v'), Some('e')) | (Some('r'), Some('e')) => true,
+                // ` 't`, ` 'd`, ` 'll` - llama.cpp comments these out but we include for completeness
+                // (Some('t'), _) | (Some('d'), _) => true,
+                // (Some('l'), Some('l')) => true,
+                _ => false,
+            };
+
+            if should_remove_space {
+                chars.remove(i - 1);
+                // Don't increment
+            } else {
+                i += 1;
+            }
+        } else {
+            i += 1;
+        }
+    }
+
+    chars.into_iter().collect()
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Failed to read GGUF file: {0}")]
@@ -467,6 +786,9 @@ pub enum Error {
 
     #[error("Vocabulary error: {0}")]
     VocabularyError(String),
+
+    #[error("Invalid UTF-8: {0}")]
+    InvalidUtf8(String),
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),

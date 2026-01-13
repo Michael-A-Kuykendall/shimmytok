@@ -1,9 +1,9 @@
 [package]
 name = "shimmytok"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 authors = ["shimmytok contributors"]
-description = "Pure Rust tokenizer for GGUF models with llama.cpp compatibility (SentencePiece + BPE)"
+description = "Pure Rust tokenizer for GGUF models with llama.cpp compatibility (SentencePiece + BPE + WPM + UGM + RWKV)"
 keywords = ["tokenizer", "gguf", "llama", "sentencepiece", "llm"]
 categories = ["text-processing", "encoding", "parser-implementations"]
 license = "MIT"
@@ -26,3 +26,8 @@ dirs = "5.0"
 [[bench]]
 name = "tokenization"
 harness = false
+
+# Treat this crate as its own workspace root.
+# This avoids errors when the repository is located inside another Cargo workspace
+# (e.g. at `../Cargo.toml`) that doesn't list `shimmytok` as a member.
+[workspace]

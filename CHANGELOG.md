@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-01-XX
+
+### Added
+- **WPM (Word-Piece Model) tokenizer** - phantom space + greedy longest match algorithm
+- **RWKV tokenizer** - trie-based greedy matching with escape sequence support
+- **UGM (Unigram) tokenizer** - Viterbi-style DP for optimal tokenization
+- **PLaMo-2 tokenizer** - table-driven reverse DP with byte fallback
+- `clean_spaces` decoding support - llama.cpp parity for punctuation/contraction spacing
+- `InvalidUtf8` error variant for decode operations
+
+### Algorithm Coverage
+- Full llama.cpp LLAMA_VOCAB_TYPE coverage:
+  - SPM (SentencePiece) ✅
+  - BPE (Byte-Pair Encoding) ✅
+  - WPM (Word-Piece Model) ✅ NEW
+  - UGM (Unigram) ✅ NEW
+  - RWKV ✅ NEW
+- PLaMo-2 tokenizer ✅ NEW
+
+### Public API Additions
+- `WpmTokenizer` struct with `encode()` and `decode()`
+- `RwkvTokenizer` struct with `encode()` and `decode()`
+- `UgmTokenizer` struct with `encode()` and `decode()`
+- `Plamo2Tokenizer` struct with `encode()` and `decode()`
+
+## [0.6.0] - 2025-01-XX
+
+### Fixed
+- llama.cpp parity fixes (Tier 1 - 13 tests passing)
+
 ## [0.4.0] - 2025-10-22
 
 ### Added

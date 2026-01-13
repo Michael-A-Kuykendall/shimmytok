@@ -69,25 +69,29 @@ let text = tokenizer.decode(&tokens, true)?;  // Strips BOS/EOS from output
 
 ## Supported Models
 
-| Model Type | Status | Implementation | Patterns |
-|------------|--------|----------------|----------|
-| LLaMA/Llama-2/Llama-3 | ✅ Full support | SentencePiece (validated) | N/A |
-| Mistral | ✅ Full support | SentencePiece (validated) | N/A |
-| Phi-3 | ✅ Full support | SentencePiece (validated) | N/A |
-| Qwen/Qwen2 | ✅ Full support | BPE (20 patterns) | qwen2 |
-| Gemma | ✅ Full support | SentencePiece (validated) | N/A |
-| GPT-2 / GPT-3 | ✅ Tested | Priority queue BPE | gpt2 (default) |
-| Falcon | ✅ Implemented | BPE | falcon |
-| MPT | ✅ Implemented | BPE | mpt |
-| StarCoder | ✅ Implemented | BPE | starcoder |
-| GPT-NeoX | ✅ Implemented | BPE | gpt-neox |
-| BLOOM | ✅ Implemented | BPE | bloom |
-| DeepSeek | ✅ Implemented | BPE | deepseek-llm, deepseek-coder |
-| ChatGLM | ✅ Implemented | BPE | chatglm3, chatglm4 |
-| Command-R | ✅ Implemented | BPE | command-r |
-| DBRX | ✅ Implemented | BPE | dbrx |
+| Model Type | Status | Implementation | Notes |
+|------------|--------|----------------|-------|
+| LLaMA/Llama-2/Llama-3 | ✅ Full support | SentencePiece (validated) | 100% llama.cpp parity |
+| Mistral | ✅ Full support | SentencePiece (validated) | |
+| Phi-3 | ✅ Full support | SentencePiece (validated) | |
+| Qwen/Qwen2 | ✅ Full support | BPE (20 patterns) | |
+| Gemma | ✅ Full support | SentencePiece (validated) | |
+| GPT-2 / GPT-3 | ✅ Tested | Priority queue BPE | |
+| Falcon | ✅ Implemented | BPE | |
+| MPT | ✅ Implemented | BPE | |
+| StarCoder | ✅ Implemented | BPE | |
+| GPT-NeoX | ✅ Implemented | BPE | |
+| BLOOM | ✅ Implemented | BPE | |
+| DeepSeek | ✅ Implemented | BPE | |
+| ChatGLM | ✅ Implemented | BPE | |
+| Command-R | ✅ Implemented | BPE | |
+| DBRX | ✅ Implemented | BPE | |
+| **WPM Models** | ✅ NEW | Word-Piece Model | phantom space + greedy |
+| **RWKV** | ✅ NEW | Trie-based | escape sequences |
+| **UGM/T5** | ✅ NEW | Unigram Viterbi | score-based DP |
+| **PLaMo-2** | ✅ NEW | Table-driven DP | byte fallback |
 
-**Total**: 20 BPE pre-tokenizer patterns implemented. See [BPE_PATTERNS.md](BPE_PATTERNS.md) for complete list.
+**Total**: 20 BPE pre-tokenizer patterns + 4 new tokenizer algorithms. See [BPE_PATTERNS.md](BPE_PATTERNS.md) for complete list.
 
 ## Validation
 

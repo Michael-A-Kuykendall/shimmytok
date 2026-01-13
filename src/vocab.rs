@@ -63,12 +63,25 @@ pub struct Vocabulary {
     eos_token_id: TokenId,
     unk_token_id: TokenId,
     pad_token_id: Option<TokenId>,
+    // Additional special tokens (llama.cpp parity)
+    eot_token_id: Option<TokenId>,
+    eog_token_id: Option<TokenId>,
+    sep_token_id: Option<TokenId>,
+    nl_token_id: Option<TokenId>,
+    fim_pre_token_id: Option<TokenId>,
+    fim_suf_token_id: Option<TokenId>,
+    fim_mid_token_id: Option<TokenId>,
+    mask_token_id: Option<TokenId>,
 
     // Tokenization flags
     add_bos_token: bool,
     add_eos_token: bool,
-    #[allow(dead_code)]
     add_space_prefix: bool,
+    // Cleanup/normalization flags
+    clean_spaces: bool,
+    remove_extra_whitespaces: bool,
+    escape_whitespaces: bool,
+    treat_whitespace_as_suffix: bool,
 
     // For BPE models
     merges: Vec<(String, String)>,
@@ -182,10 +195,22 @@ impl Vocabulary {
             eos_token_id: metadata.eos_token_id.unwrap_or(2),
             unk_token_id: metadata.unk_token_id.unwrap_or(0),
             pad_token_id: metadata.pad_token_id,
+            eot_token_id: metadata.eot_token_id,
+            eog_token_id: metadata.eog_token_id,
+            sep_token_id: metadata.sep_token_id,
+            nl_token_id: metadata.nl_token_id,
+            fim_pre_token_id: metadata.fim_pre_token_id,
+            fim_suf_token_id: metadata.fim_suf_token_id,
+            fim_mid_token_id: metadata.fim_mid_token_id,
+            mask_token_id: metadata.mask_token_id,
 
             add_bos_token: metadata.add_bos_token.unwrap_or(true),
             add_eos_token: metadata.add_eos_token.unwrap_or(false),
             add_space_prefix: metadata.add_space_prefix.unwrap_or(true),
+            clean_spaces: metadata.clean_spaces.unwrap_or(false),
+            remove_extra_whitespaces: metadata.remove_extra_whitespaces.unwrap_or(false),
+            escape_whitespaces: metadata.escape_whitespaces.unwrap_or(false),
+            treat_whitespace_as_suffix: metadata.treat_whitespace_as_suffix.unwrap_or(false),
 
             merges: metadata.merges.unwrap_or_default(),
         })
@@ -249,6 +274,50 @@ impl Vocabulary {
             || id == self.eos_token_id
             || id == self.unk_token_id
             || self.pad_token_id == Some(id)
+            || self.eot_token_id == Some(id)
+            || self.eog_token_id == Some(id)
+            || self.sep_token_id == Some(id)
+            || self.mask_token_id == Some(id)
+    }
+
+    /// Build a map of special token strings to their IDs for parse_special mode.
+    /// Returns tokens that have Control type or are known special token IDs.
+    #[must_use]
+    pub fn special_token_map(&self) -> HashMap<String, TokenId> {
+        let mut map = HashMap::new();
+        
+        // Add known special token IDs
+        let special_ids: Vec<Option<TokenId>> = vec![
+            Some(self.bos_token_id),
+            Some(self.eos_token_id),
+            Some(self.unk_token_id),
+            self.pad_token_id,
+            self.eot_token_id,
+            self.eog_token_id,
+            self.sep_token_id,
+            self.nl_token_id,
+            self.fim_pre_token_id,
+            self.fim_suf_token_id,
+            self.fim_mid_token_id,
+            self.mask_token_id,
+        ];
+        
+        for opt_id in special_ids.into_iter().flatten() {
+            if let Some(text) = self.get_token_text(opt_id) {
+                map.insert(text.to_string(), opt_id);
+            }
+        }
+        
+        // Also add all Control-type tokens
+        for (id, token_type) in self.token_types.iter().enumerate() {
+            if *token_type == TokenType::Control {
+                if let Some(text) = self.get_token_text(id as TokenId) {
+                    map.insert(text.to_string(), id as TokenId);
+                }
+            }
+        }
+        
+        map
     }
 
     #[must_use] 
@@ -293,5 +362,74 @@ impl Vocabulary {
     #[must_use] 
     pub fn n_tokens(&self) -> usize {
         self.tokens.len()
+    }
+
+    // Additional special token accessors (llama.cpp parity)
+
+    #[must_use]
+    pub fn eot_token_id(&self) -> Option<TokenId> {
+        self.eot_token_id
+    }
+
+    #[must_use]
+    pub fn eog_token_id(&self) -> Option<TokenId> {
+        self.eog_token_id
+    }
+
+    #[must_use]
+    pub fn sep_token_id(&self) -> Option<TokenId> {
+        self.sep_token_id
+    }
+
+    #[must_use]
+    pub fn nl_token_id(&self) -> Option<TokenId> {
+        self.nl_token_id
+    }
+
+    #[must_use]
+    pub fn fim_pre_token_id(&self) -> Option<TokenId> {
+        self.fim_pre_token_id
+    }
+
+    #[must_use]
+    pub fn fim_suf_token_id(&self) -> Option<TokenId> {
+        self.fim_suf_token_id
+    }
+
+    #[must_use]
+    pub fn fim_mid_token_id(&self) -> Option<TokenId> {
+        self.fim_mid_token_id
+    }
+
+    #[must_use]
+    pub fn mask_token_id(&self) -> Option<TokenId> {
+        self.mask_token_id
+    }
+
+    // Cleanup/normalization flag accessors
+
+    #[must_use]
+    pub fn add_space_prefix(&self) -> bool {
+        self.add_space_prefix
+    }
+
+    #[must_use]
+    pub fn clean_spaces(&self) -> bool {
+        self.clean_spaces
+    }
+
+    #[must_use]
+    pub fn remove_extra_whitespaces(&self) -> bool {
+        self.remove_extra_whitespaces
+    }
+
+    #[must_use]
+    pub fn escape_whitespaces(&self) -> bool {
+        self.escape_whitespaces
+    }
+
+    #[must_use]
+    pub fn treat_whitespace_as_suffix(&self) -> bool {
+        self.treat_whitespace_as_suffix
     }
 }

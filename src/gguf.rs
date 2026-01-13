@@ -16,9 +16,24 @@ pub struct GGUFMetadata {
     pub eos_token_id: Option<u32>,
     pub unk_token_id: Option<u32>,
     pub pad_token_id: Option<u32>,
+    // Additional special tokens (llama.cpp parity)
+    pub eot_token_id: Option<u32>,
+    pub eog_token_id: Option<u32>,
+    pub sep_token_id: Option<u32>,
+    pub nl_token_id: Option<u32>,
+    pub fim_pre_token_id: Option<u32>,
+    pub fim_suf_token_id: Option<u32>,
+    pub fim_mid_token_id: Option<u32>,
+    pub mask_token_id: Option<u32>,
+    // Flags
     pub add_bos_token: Option<bool>,
     pub add_eos_token: Option<bool>,
     pub add_space_prefix: Option<bool>,
+    // Cleanup/normalization flags
+    pub clean_spaces: Option<bool>,
+    pub remove_extra_whitespaces: Option<bool>,
+    pub escape_whitespaces: Option<bool>,
+    pub treat_whitespace_as_suffix: Option<bool>,
     pub merges: Option<Vec<(String, String)>>,
 }
 
@@ -109,6 +124,47 @@ pub fn load_metadata<P: AsRef<Path>>(path: P) -> Result<GGUFMetadata, Error> {
         _ => None,
     };
 
+    // Additional special tokens (llama.cpp parity)
+    let eot_token_id = match kv_pairs.get("tokenizer.ggml.eot_token_id") {
+        Some(Value::U32(v)) => Some(*v),
+        _ => None,
+    };
+
+    let eog_token_id = match kv_pairs.get("tokenizer.ggml.eog_token_id") {
+        Some(Value::U32(v)) => Some(*v),
+        _ => None,
+    };
+
+    let sep_token_id = match kv_pairs.get("tokenizer.ggml.sep_token_id") {
+        Some(Value::U32(v)) => Some(*v),
+        _ => None,
+    };
+
+    let nl_token_id = match kv_pairs.get("tokenizer.ggml.nl_token_id") {
+        Some(Value::U32(v)) => Some(*v),
+        _ => None,
+    };
+
+    let fim_pre_token_id = match kv_pairs.get("tokenizer.ggml.fim_pre_token_id") {
+        Some(Value::U32(v)) => Some(*v),
+        _ => None,
+    };
+
+    let fim_suf_token_id = match kv_pairs.get("tokenizer.ggml.fim_suf_token_id") {
+        Some(Value::U32(v)) => Some(*v),
+        _ => None,
+    };
+
+    let fim_mid_token_id = match kv_pairs.get("tokenizer.ggml.fim_mid_token_id") {
+        Some(Value::U32(v)) => Some(*v),
+        _ => None,
+    };
+
+    let mask_token_id = match kv_pairs.get("tokenizer.ggml.mask_token_id") {
+        Some(Value::U32(v)) => Some(*v),
+        _ => None,
+    };
+
     // Flags
     let add_bos_token = match kv_pairs.get("tokenizer.ggml.add_bos_token") {
         Some(Value::Bool(v)) => Some(*v),
@@ -121,6 +177,27 @@ pub fn load_metadata<P: AsRef<Path>>(path: P) -> Result<GGUFMetadata, Error> {
     };
 
     let add_space_prefix = match kv_pairs.get("tokenizer.ggml.add_space_prefix") {
+        Some(Value::Bool(v)) => Some(*v),
+        _ => None,
+    };
+
+    // Cleanup/normalization flags
+    let clean_spaces = match kv_pairs.get("tokenizer.ggml.clean_spaces") {
+        Some(Value::Bool(v)) => Some(*v),
+        _ => None,
+    };
+
+    let remove_extra_whitespaces = match kv_pairs.get("tokenizer.ggml.remove_extra_whitespaces") {
+        Some(Value::Bool(v)) => Some(*v),
+        _ => None,
+    };
+
+    let escape_whitespaces = match kv_pairs.get("tokenizer.ggml.escape_whitespaces") {
+        Some(Value::Bool(v)) => Some(*v),
+        _ => None,
+    };
+
+    let treat_whitespace_as_suffix = match kv_pairs.get("tokenizer.ggml.treat_whitespace_as_suffix") {
         Some(Value::Bool(v)) => Some(*v),
         _ => None,
     };
@@ -150,9 +227,21 @@ pub fn load_metadata<P: AsRef<Path>>(path: P) -> Result<GGUFMetadata, Error> {
         eos_token_id,
         unk_token_id,
         pad_token_id,
+        eot_token_id,
+        eog_token_id,
+        sep_token_id,
+        nl_token_id,
+        fim_pre_token_id,
+        fim_suf_token_id,
+        fim_mid_token_id,
+        mask_token_id,
         add_bos_token,
         add_eos_token,
         add_space_prefix,
+        clean_spaces,
+        remove_extra_whitespaces,
+        escape_whitespaces,
+        treat_whitespace_as_suffix,
         merges,
     })
 }
