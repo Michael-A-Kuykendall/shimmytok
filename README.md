@@ -40,7 +40,7 @@ This release achieves **full llama.cpp tokenizer parity**:
 - ✅ **6 tokenizer algorithms** — SPM, BPE, WPM, UGM, RWKV, PLaMo-2
 - ✅ **41 BPE pre-tokenization patterns** — GPT-2, Llama-3, Qwen, DeepSeek, and more
 - ✅ **10/10 vocab models validated** — Exact token match against `llama-tokenize`
-- ✅ **~2,800 lines of Rust** — Focused, auditable, no bloat
+- ✅ **~4,000 lines of Rust** — Focused, auditable, no bloat
 
 ## Features
 
@@ -76,7 +76,7 @@ println!("Text: {}", text);
 
 // Stream tokens one at a time (for LLM generation)
 for token_id in tokens {
-    print!("{}", tokenizer.decode_single(token_id)?);
+    print!("{}", tokenizer.decode_single(token_id, false)?);
 }
 ```
 
@@ -137,7 +137,7 @@ let tokens = tokenizer.encode("Hello", true)?;  // true = add BOS/EOS
 let text = tokenizer.decode(&tokens, true)?;    // true = skip special tokens
 
 // Streaming decode (for LLM generation)
-let piece = tokenizer.decode_single(token_id)?;
+let piece = tokenizer.decode_single(token_id, false)?;
 ```
 
 ### Metadata
