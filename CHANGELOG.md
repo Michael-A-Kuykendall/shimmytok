@@ -7,35 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.7.0] - 2025-01-XX
+## [0.7.0] - 2025-01-26
+
+### 🎯 Full llama.cpp Tokenizer Parity
+
+This release completes support for all tokenizer types in llama.cpp's `LLAMA_VOCAB_TYPE` enum.
 
 ### Added
-- **WPM (Word-Piece Model) tokenizer** - phantom space + greedy longest match algorithm
-- **RWKV tokenizer** - trie-based greedy matching with escape sequence support
-- **UGM (Unigram) tokenizer** - Viterbi-style DP for optimal tokenization
-- **PLaMo-2 tokenizer** - table-driven reverse DP with byte fallback
-- `clean_spaces` decoding support - llama.cpp parity for punctuation/contraction spacing
-- `InvalidUtf8` error variant for decode operations
 
-### Algorithm Coverage
-- Full llama.cpp LLAMA_VOCAB_TYPE coverage:
-  - SPM (SentencePiece) ✅
-  - BPE (Byte-Pair Encoding) ✅
-  - WPM (Word-Piece Model) ✅ NEW
-  - UGM (Unigram) ✅ NEW
-  - RWKV ✅ NEW
-- PLaMo-2 tokenizer ✅ NEW
+**New Tokenizers**
+- **WPM (Word-Piece Model)** - BERT-style tokenizer with phantom space and greedy longest match
+- **RWKV** - Trie-based greedy matching with escape sequence support  
+- **UGM (Unigram)** - Viterbi-style dynamic programming for optimal tokenization
+- **PLaMo-2** - Table-driven reverse DP with byte fallback
 
-### Public API Additions
-- `WpmTokenizer` struct with `encode()` and `decode()`
-- `RwkvTokenizer` struct with `encode()` and `decode()`
-- `UgmTokenizer` struct with `encode()` and `decode()`
-- `Plamo2Tokenizer` struct with `encode()` and `decode()`
+**API Additions**
+- `pre_type()` method - Query pre-tokenization pattern type
+- `clean_spaces` decoding - llama.cpp parity for punctuation/contraction spacing
+- `InvalidUtf8` error variant - Better error handling for decode operations
 
-## [0.6.0] - 2025-01-XX
+### Validated
+
+All tokenizers validated against `llama-tokenize` with exact token match:
+
+| Model | Type | Status |
+|-------|------|--------|
+| bert-bge | WPM | ✅ |
+| command-r | BPE | ✅ |
+| deepseek-coder | BPE | ✅ |
+| deepseek-llm | BPE | ✅ |
+| falcon | BPE | ✅ |
+| gpt-2 | BPE | ✅ |
+| llama-spm | SPM | ✅ |
+| qwen2 | BPE | ✅ |
+| refact | BPE | ✅ |
+| starcoder | BPE | ✅ |
 
 ### Fixed
-- llama.cpp parity fixes (Tier 1 - 13 tests passing)
+- `deepseek-llm` regex pattern simplified for Rust regex compatibility
+- UGM `user_defined_trie` now correctly preprocesses text before Viterbi DP
+
+## [0.6.0] - 2025-01-20
+
+### Fixed
+- llama.cpp parity fixes for Tier 1 models (13 tests passing)
 
 ## [0.4.0] - 2025-10-22
 
@@ -59,10 +74,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Gemma models (SentencePiece tokenizer)
 - `model_type()` method to query tokenizer model type
 
-### Documentation
-- Updated README with expanded model support table
-- Added Mistral, Qwen, and Gemma to supported models list
-
 ## [0.2.0] - 2025-10-22
 
 ### Added
@@ -74,11 +85,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 1.5-2x speedup on `encode()` (vocabulary caching already in place)
 - 2-4x speedup on batch encoding via Rayon parallel processing
 - ~40% improvement on decode and load operations
-
-### Internal
-- Added rayon dependency for parallel batch processing
-- Added criterion and dirs dev dependencies for benchmarking
-- Benchmarks for encode, decode, load, and batch operations
 
 ## [0.1.0] - 2025-10-22
 
@@ -92,34 +98,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `Tokenizer::from_gguf_file()` - Load from GGUF
   - `encode()` - Text to token IDs
   - `decode()` - Token IDs to text
-  - `decode_single()` - Single token to text
   - `vocab_size()` - Get vocabulary size
-  - `token_to_piece()` - Get token bytes
+  - `bos_token()` / `eos_token()` - Special tokens
 - Comprehensive error handling with `thiserror`
-- Input validation (MAX_INPUT_SIZE: 10MB, MAX_OUTPUT_TOKENS: 1M)
-- 30 tests including:
-  - 8/8 llama.cpp validation tests (100% match)
-  - 7 negative/error handling tests
-  - Round-trip verification
-  - Unicode/emoji handling
-  - Special token (BOS/EOS) handling
-- No unsafe code - pure safe Rust
-- Minimal dependencies (thiserror + regex only)
+- 30 tests with 100% llama.cpp match
 
 ### Validated Models
 - ✅ LLaMA/Llama-2/Llama-3 (SentencePiece)
 - ✅ Phi-3 (SentencePiece)
 - ✅ GPT-2 (BPE)
 
-### Documentation
-- Comprehensive README with examples
-- API documentation with rustdoc
-- Contributing guidelines
-- Code of Conduct
-- Security policy
-- DCO (Developer Certificate of Origin)
-
-[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.4.0...v0.6.0
 [0.4.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.1.0...v0.2.0

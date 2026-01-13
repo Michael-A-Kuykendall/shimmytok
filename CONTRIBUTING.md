@@ -1,145 +1,94 @@
-# Contributing to shimmytok
+# 🤝 Contributing to shimmytok
 
-Thanks for your interest in contributing to shimmytok!
+**Welcome to shimmytok!**
 
-## 🚨 IMPORTANT: Maintainer-Only Pull Requests
+## Open Source, Not Open Contribution
 
-**Pull requests are restricted to approved maintainers only.** Unsolicited PRs will be declined. To contribute code, you must first apply for maintainer status by emailing michaelallenkuykendall@gmail.com.
+shimmytok is **open source** but **not open contribution**.
 
-**Non-maintainers can contribute by:**
-- Opening issues for bugs or feature requests
-- Participating in GitHub Discussions
-- Providing feedback and testing
-- Reporting tokenization issues with specific models
+- The code is freely available under the MIT license
+- You can fork, modify, use, and learn from it without restriction
+- **Pull requests are not accepted by default**
+- All architectural, roadmap, and merge decisions are made by the project maintainer
+
+This model keeps the project coherent, maintains clear ownership, and ensures consistent quality. It's the same approach used by SQLite and many infrastructure projects.
 
 ## How to Contribute
 
-1. Fork the repo and create a branch (`git checkout -b feature/foo`)
-2. Make your changes with clear commits and tests if applicable
-3. **Sign off your commits** (required): `git commit -s -m "Your message"`
-4. Run existing tests to ensure nothing breaks (`cargo test`)
-5. Ensure code quality (`cargo fmt && cargo clippy`)
-6. Open a Pull Request against `main`
+If you believe you can contribute meaningfully to shimmytok:
 
-### Developer Certificate of Origin (DCO)
+1. **Email the maintainer first**: [michaelallenkuykendall@gmail.com](mailto:michaelallenkuykendall@gmail.com)
+2. Describe your background and proposed contribution
+3. If there is alignment, a scoped collaboration may be discussed privately
+4. Only after discussion will PRs be considered
 
-All contributions must be signed off with the Developer Certificate of Origin. This certifies that you have the right to contribute your code. See [DCO.md](DCO.md) for details.
+**Unsolicited PRs will be closed without merge.** This isn't personal — it's how this project operates.
 
-**Quick setup:**
+## What We Welcome (via email first)
+
+- Bug reports with detailed reproduction steps (Issues are fine)
+- Security vulnerability reports (please email directly)
+- Tokenization accuracy issues with specific models
+- Documentation improvements (discuss first)
+
+## What We Handle Internally
+
+- New tokenizer implementations
+- API design decisions
+- GGUF format support
+- Performance optimizations
+- llama.cpp parity work
+
+## Bug Reports
+
+Bug reports via GitHub Issues are welcome! Please include:
+- Model file used (or GGUF source)
+- Input text that caused the issue
+- Expected vs actual token output
+- shimmytok version and Rust version
+- Comparison with llama.cpp output if possible
+
+## Code Style (for reference)
+
+If a contribution is discussed and approved:
+- Rust 2021 edition with `cargo fmt` and `cargo clippy`
+- Comprehensive error handling using `thiserror`
+- All public APIs must have documentation with examples
+- Tests with llama.cpp validation
+
+## shimmytok Philosophy
+
+Any accepted work must align with:
+- **Pure Rust**: No C++ dependencies
+- **GGUF-focused**: Direct loading from model files
+- **llama.cpp compatible**: Match reference implementation
+- **Correctness over performance**: Get it right first
+- **Minimal dependencies**: Lightweight and focused
+- **Free Forever**: No features that could lead to paid tiers
+
+## Developer Certificate of Origin (DCO)
+
+All contributions must be signed off with the Developer Certificate of Origin. See [DCO.md](DCO.md) for details.
+
 ```bash
 git config format.signoff true  # Auto sign-off all commits
 ```
 
-## Code Style
+## Why This Model?
 
-- Rust 2021 edition
-- Use `cargo fmt` and `cargo clippy` before submitting
-- Keep PRs small and focused - large refactors may be rejected
-- Add tests for new functionality
-- Document public APIs with rustdoc comments
+Building a reliable tokenizer requires tight control over correctness. This ensures:
+- Perfect match with llama.cpp reference implementation
+- No ownership disputes or governance overhead
+- Quality control without committee delays
+- Clear direction for the project's future
 
-## Contribution Scope
-
-Features should align with the **shimmytok philosophy**:
-- **Pure Rust**: No C++ dependencies
-- **GGUF-focused**: Direct loading from model files
-- **llama.cpp compatible**: Match reference implementation
-- **Lightweight**: Minimal dependencies, focused scope
-- **Correctness over performance**: Get it right first
-
-## What We Welcome
-
-- Bug fixes with test cases
-- Tokenization correctness improvements
-- GGUF format compatibility enhancements
-- Documentation improvements
-- Test coverage improvements
-- New model support (with llama.cpp validation)
-
-## What We Generally Reject
-
-- Features that add heavy dependencies
-- Complex configuration systems
-- Breaking changes to public API
-- Performance optimizations that sacrifice correctness
-- Features not aligned with llama.cpp
-
-## Review Process
-
-**IMPORTANT: Pull Request Access is Restricted**
-- Only approved maintainers may submit pull requests
-- All contributions from non-maintainers will be declined
-- Code contributions require pre-approval via maintainer application process
-
-**For Approved Maintainers:**
-- All PRs require review and approval from the lead maintainer
-- Merge authority is reserved to maintain project direction
-- We aim to review PRs within 1-2 business days
-- Constructive feedback will be provided for rejected PRs
-
-## Development Setup
-
-```bash
-# Clone and setup
-git clone https://github.com/Michael-A-Kuykendall/shimmytok
-cd shimmytok
-cargo build
-
-# Run tests
-cargo test
-
-# Run specific test suites
-cargo test --test test_comprehensive  # llama.cpp validation
-cargo test --test test_error_handling # Error cases
-
-# Check formatting and linting
-cargo fmt --check
-cargo clippy -- -D warnings
-```
-
-## Testing Requirements
-
-- All new tokenizer implementations must have llama.cpp validation tests
-- Error handling must have negative test cases
-- Round-trip tests (encode → decode) must pass
-- Edge cases (emoji, Unicode, whitespace) must be covered
-
-## Maintainer Process
-
-### Current Maintainer Structure
-- **Lead Maintainer**: Michael A. Kuykendall (@Michael-A-Kuykendall)
-- **Additional Maintainers**: Currently none (solo-maintained project)
-
-### Becoming a Maintainer
-
-Currently, shimmytok is maintained by a single maintainer to ensure consistent quality and vision. **Code contributions require pre-approved maintainer status.**
-
-**To apply for maintainer status:**
-
-1. **Private Application**: Email michaelallenkuykendall@gmail.com with:
-   - Your GitHub username and relevant experience
-   - Area of expertise (e.g., tokenization algorithms, GGUF format, Rust)
-   - Time commitment you can provide
-   - Why you'd like to help maintain shimmytok
-
-2. **Evaluation Process**: Applications are reviewed when additional maintainers are needed
-3. **No Unsolicited PRs**: Code contributions without prior approval will be declined
-
-### Maintainer Responsibilities
-
-When additional maintainers are added, they will:
-- Review and approve pull requests
-- Triage and respond to issues
-- Maintain code quality standards
-- Validate tokenization correctness against llama.cpp
-- Uphold the shimmytok philosophy and project direction
-
-*Note: The project may remain solo-maintained until contribution volume requires additional help.*
+The code is open. The governance is centralized. This is intentional.
 
 ## Recognition
 
-Contributors are acknowledged in `AUTHORS.md` after a merged PR.
+Helpful bug reports and community members are acknowledged in release notes.
+If email collaboration leads to merged work, attribution will be given appropriately.
 
-## Questions?
+---
 
-Open a GitHub Discussion or ping @Michael-A-Kuykendall in your issue.
+**Maintainer**: Michael A. Kuykendall
