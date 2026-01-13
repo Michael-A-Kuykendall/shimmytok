@@ -1,6 +1,6 @@
 <div align="center">
 
-# shimmytok
+<img src="assets/shimmytok-logo.png" alt="shimmytok - Pure Rust tokenizer for GGUF models" width="400">
 
 ### Pure Rust tokenizer for GGUF models
 **100% llama.cpp compatible • zero C++ • just works**
