@@ -108,9 +108,12 @@ impl BPETokenizer {
             ],
             
             // DeepSeek family (patterns from llama.cpp llama-vocab.cpp lines 323-332)
+            // Note: Original deepseek-llm pattern has explicit Unicode ranges that include astral plane
+            // characters (e.g., 𐐀-𐑏) which Rust's regex crate doesn't fully support.
+            // We use \p{L} as a practical approximation that covers most use cases.
             "deepseek-llm" => vec![
                 r"[\r\n]",
-                r"\s?[A-Za-zµÀ-ÖØ-öø-ƺƼ-ƿǄ-ʓʕ-ʯͰ-ͳͶͷͻ-ͽͿΆΈ-ΊΌΎ-ΡΣ-ϵϷ-ҁҊ-ԯԱ-ՖႠ-ჅᎠ-Ᏽᏸ-ᏽᲐ-ᲺᲽ-Ჿᴀ-ᴫᵫ-ᵷᵹ-ᶚḀ-ἕἘ-Ἕἠ-ὅὈ-Ὅὐ-ὗὙὛὝὟ-ώᾀ-ᾴᾶ-ᾼιῂ-ῄῆ-ῌῐ-ΐῖ-Ίῠ-Ῥῲ-ῴῶ-ῼℂℇℊ-ℓℕℙ-ℝℤΩℨK-ℭℯ-ℴℹℼ-ℿⅅ-ⅉⅎↃↄⰀ-ⱻⱾ-ⳤⳫ-ⳮⳲⳳꙀ-ꙭꚀ-ꚛꜢ-ꝯꝱ-ꞇꞋ-ꞎꭰ-ꮿﬀ-ﬆﬓ-ﬗＡ-Ｚａ-ｚ𐐀-𐑏𐒰-𐓓𐓘-𐓻𐲀-𐲲𐳀-𐳲𑢠-𑣟𞤀-𞥃]+",
+                r"\s?\p{L}+",  // Simplified from explicit Unicode ranges
                 r"\s?[!-/:-~！-／：-～'-‟　-。]+",
                 r"\s+$",
                 r"[一-龥ࠀ-一가-퟿]+",

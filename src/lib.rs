@@ -515,6 +515,19 @@ impl Tokenizer {
         self.vocab.model_type()
     }
 
+    /// Get the pre-tokenization type (for BPE models)
+    ///
+    /// Returns the pre-tokenizer identifier from GGUF metadata.
+    /// Used internally to select the correct regex patterns for pre-tokenization.
+    ///
+    /// # Returns
+    ///
+    /// The pre-type string like "llama3", "gpt-2", "deepseek-coder", etc., or None if not set.
+    #[must_use] 
+    pub fn pre_type(&self) -> Option<&str> {
+        self.vocab.pre_type()
+    }
+
     /// Encode multiple texts in parallel
     ///
     /// This method uses parallel processing to encode multiple texts simultaneously,
