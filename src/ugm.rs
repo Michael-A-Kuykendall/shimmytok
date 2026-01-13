@@ -62,10 +62,17 @@ impl NaiveTrie {
     }
 }
 
+/// Fragment types during user-defined token preprocessing.
+enum UgmFragment {
+    /// A user-defined token that was matched
+    UserDefined(u32),
+    /// Regular text to be tokenized via Viterbi
+    Text(String),
+}
+
 /// UGM tokenizer using Viterbi-style DP.
 pub struct UgmTokenizer {
     trie: NaiveTrie,
-    #[allow(dead_code)]
     user_defined_trie: NaiveTrie,
     unknown_token_score: f64,
 }
@@ -124,6 +131,88 @@ impl UgmTokenizer {
             return Ok(Vec::new());
         }
 
+        // Preprocess: split on user-defined tokens first (llama.cpp parity)
+        // User-defined tokens like <|endoftext|> must be matched greedily before Viterbi
+        let fragments = self.split_on_user_defined(&normalized);
+        
+        let mut result = Vec::new();
+        for fragment in fragments {
+            match fragment {
+                UgmFragment::UserDefined(token_id) => {
+                    result.push(token_id);
+                }
+                UgmFragment::Text(segment) => {
+                    let tokens = self.encode_segment(&segment, vocab)?;
+                    result.extend(tokens);
+                }
+            }
+        }
+        
+        Ok(result)
+    }
+
+    /// Split text on user-defined tokens using greedy longest match.
+    fn split_on_user_defined(&self, text: &str) -> Vec<UgmFragment> {
+        let bytes = text.as_bytes();
+        let n = bytes.len();
+        let mut fragments = Vec::new();
+        let mut pos = 0;
+        let mut text_start = 0;
+
+        while pos < n {
+            // Try to match a user-defined token at this position
+            let mut best_len = 0;
+            let mut best_id = None;
+            
+            if let Some(mut node) = self.user_defined_trie.traverse(0, bytes[pos]) {
+                let mut len = 1;
+                if let Some(id) = self.user_defined_trie.value(node) {
+                    best_len = len;
+                    best_id = Some(id);
+                }
+                
+                while pos + len < n {
+                    match self.user_defined_trie.traverse(node, bytes[pos + len]) {
+                        Some(next) => {
+                            node = next;
+                            len += 1;
+                            if let Some(id) = self.user_defined_trie.value(node) {
+                                best_len = len;
+                                best_id = Some(id);
+                            }
+                        }
+                        None => break,
+                    }
+                }
+            }
+            
+            if let Some(token_id) = best_id {
+                // Emit any text before this user-defined token
+                if pos > text_start {
+                    fragments.push(UgmFragment::Text(text[text_start..pos].to_string()));
+                }
+                fragments.push(UgmFragment::UserDefined(token_id));
+                pos += best_len;
+                text_start = pos;
+            } else {
+                pos += 1;
+            }
+        }
+        
+        // Emit remaining text
+        if text_start < n {
+            fragments.push(UgmFragment::Text(text[text_start..].to_string()));
+        }
+        
+        fragments
+    }
+
+    /// Encode a text segment (no user-defined tokens) using Viterbi DP.
+    fn encode_segment(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<u32>, Error> {
+        if text.is_empty() {
+            return Ok(Vec::new());
+        }
+
         // Best tokenization DP table
         #[derive(Clone, Copy)]
         struct Best {
@@ -132,7 +221,7 @@ impl UgmTokenizer {
             score: f64,
         }
 
-        let n = normalized.len();
+        let n = text.len();
         let unk_id = vocab.unk_token_id();
 
         let mut best: Vec<Best> = vec![
@@ -149,7 +238,7 @@ impl UgmTokenizer {
             score: 0.0,
         };
 
-        let bytes = normalized.as_bytes();
+        let bytes = text.as_bytes();
         let mut input_offset = 0usize;
 
         while input_offset < n {
