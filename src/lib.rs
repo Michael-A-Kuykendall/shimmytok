@@ -1,41 +1,61 @@
 //! # shimmytok
 //!
-//! Pure Rust tokenizer for GGUF models with llama.cpp compatibility.
+//! Pure Rust tokenizer for GGUF models with 100% llama.cpp compatibility.
 //!
 //! ## Features
 //!
-//! - 🦀 Pure Rust - no C++ dependencies
-//! - 📦 Load tokenizers directly from GGUF files
-//! - ✅ 100% compatible with llama.cpp
-//! - 🧪 Fully tested against llama.cpp output
-//! - 🎯 Simple API - 3 methods
+//! - 🦀 **Pure Rust** — No C++ dependencies, compiles anywhere
+//! - 📦 **Load from GGUF** — Tokenizer embedded in model file
+//! - ✅ **Validated** — 10/10 vocab models match llama.cpp exactly
+//! - ⚡ **Fast** — Batch encoding with Rayon parallelism
+//! - 🌊 **Streaming** — Token-by-token decoding for LLM output
 //!
-//! ## Example
+//! ## Supported Tokenizers
+//!
+//! | Type | Algorithm | Models |
+//! |------|-----------|--------|
+//! | SPM | SentencePiece | LLaMA, Mistral, Gemma |
+//! | BPE | Byte-Pair Encoding | GPT-2, Qwen, StarCoder, DeepSeek |
+//! | WPM | WordPiece | BERT, BGE embeddings |
+//! | UGM | Unigram | T5, mT5 |
+//! | RWKV | Trie-based | RWKV World |
+//! | PLaMo-2 | Table-driven DP | PLaMo-2 |
+//!
+//! ## Quick Start
 //!
 //! ```no_run
 //! use shimmytok::Tokenizer;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Load tokenizer from GGUF file
+//! // Load tokenizer from any GGUF model
 //! let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
 //!
-//! // Encode text to token IDs
-//! let tokens = tokenizer.encode("Hello world", true)?;
+//! // Encode text to tokens
+//! let tokens = tokenizer.encode("Hello, world!", true)?;
 //!
-//! // Decode token IDs back to text
+//! // Decode back to text
 //! let text = tokenizer.decode(&tokens, true)?;
+//!
+//! // Stream tokens one at a time (for LLM generation)
+//! for token_id in &tokens {
+//!     print!("{}", tokenizer.decode_single(*token_id, false)?);
+//! }
 //! # Ok(())
 //! # }
 //! ```
 //!
-//! ## Supported Models
+//! ## Batch Encoding
 //!
-//! - ✅ `LLaMA` / Llama-2 / Llama-3 (`SentencePiece`)
-//! - ✅ Mistral (`SentencePiece`)
-//! - ✅ Phi-3 (`SentencePiece`)
-//! - ✅ Qwen / Qwen2 (BPE)
-//! - ✅ Gemma (`SentencePiece`)
-//! - ✅ GPT-2 / GPT-3 style BPE
+//! ```no_run
+//! # use shimmytok::Tokenizer;
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+//! // Parallel encoding with Rayon
+//! let texts = vec!["Hello", "World", "Rust"];
+//! let batched = tokenizer.encode_batch(&texts, true)?;
+//! # Ok(())
+//! # }
+//! ```
 
 use rayon::prelude::*;
 use std::path::Path;
