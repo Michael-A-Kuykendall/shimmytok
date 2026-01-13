@@ -159,6 +159,62 @@ trait TokenizerImpl: Send + Sync {
     fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error>;
 }
 
+// Wrapper for WPM tokenizer to implement TokenizerImpl
+struct WpmWrapper {
+    inner: wpm::WpmTokenizer,
+}
+
+impl TokenizerImpl for WpmWrapper {
+    fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, Error> {
+        self.inner.encode(text, vocab)
+    }
+    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error> {
+        self.inner.decode(tokens, vocab)
+    }
+}
+
+// Wrapper for RWKV tokenizer to implement TokenizerImpl
+struct RwkvWrapper {
+    inner: rwkv::RwkvTokenizer,
+}
+
+impl TokenizerImpl for RwkvWrapper {
+    fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, Error> {
+        self.inner.encode(text, vocab)
+    }
+    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error> {
+        self.inner.decode(tokens, vocab)
+    }
+}
+
+// Wrapper for UGM tokenizer to implement TokenizerImpl
+struct UgmWrapper {
+    inner: ugm::UgmTokenizer,
+}
+
+impl TokenizerImpl for UgmWrapper {
+    fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, Error> {
+        self.inner.encode(text, vocab)
+    }
+    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error> {
+        self.inner.decode(tokens, vocab)
+    }
+}
+
+// Wrapper for PLaMo-2 tokenizer to implement TokenizerImpl
+struct Plamo2Wrapper {
+    inner: plamo2::Plamo2Tokenizer,
+}
+
+impl TokenizerImpl for Plamo2Wrapper {
+    fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, Error> {
+        self.inner.encode(text, vocab)
+    }
+    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error> {
+        self.inner.decode(tokens, vocab)
+    }
+}
+
 impl Tokenizer {
     /// Load a tokenizer from a GGUF model file
     ///
@@ -186,11 +242,21 @@ impl Tokenizer {
         let vocab = Vocabulary::from_gguf_file(path)?;
 
         let tokenizer_impl: Box<dyn TokenizerImpl> = match vocab.model_type() {
+            // SentencePiece models
             "llama" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
             "mistral" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
+            "gemma" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
+            // BPE models
             "gpt2" => Box::new(bpe::BPETokenizer::new()),
             "qwen" | "qwen2" => Box::new(bpe::BPETokenizer::new()),
-            "gemma" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
+            // WPM (WordPiece) models - BERT-style
+            "bert" | "wpm" => Box::new(WpmWrapper { inner: wpm::WpmTokenizer::new(&vocab) }),
+            // RWKV models - trie-based greedy
+            "rwkv" => Box::new(RwkvWrapper { inner: rwkv::RwkvTokenizer::new(&vocab) }),
+            // UGM (Unigram) models - T5-style Viterbi
+            "t5" | "ugm" => Box::new(UgmWrapper { inner: ugm::UgmTokenizer::new(&vocab) }),
+            // PLaMo-2 models - table-driven DP
+            "plamo2" => Box::new(Plamo2Wrapper { inner: plamo2::Plamo2Tokenizer::new(&vocab)? }),
             model => return Err(Error::UnsupportedModel(model.to_string())),
         };
 

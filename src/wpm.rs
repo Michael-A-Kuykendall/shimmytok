@@ -56,7 +56,8 @@ impl WpmTokenizer {
                 // llama.cpp upper bound: min(n, i + max_token_len + 1) and then j decrements
                 let mut j = (i + self.max_token_len + 1).min(n);
                 while j > i {
-                    if let Ok(s) = std::str::from_utf8(&word1.as_bytes()[i..j]) {
+                    // Use word1.get() to safely slice, which handles UTF-8 boundaries
+                    if let Some(s) = word1.get(i..j) {
                         if let Some(id) = vocab.get_token_id(s) {
                             out.push(id);
                             matched = true;

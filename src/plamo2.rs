@@ -87,14 +87,11 @@ impl Plamo2Tokenizer {
 
         // Basic validation: all byte tokens must be set (ref asserts this)
         // Note: We relax this check since not all models have byte tokens
-        let has_all_bytes = (0..256).all(|i| byte_token[i] != 0);
-        if !has_all_bytes {
-            // For models without byte tokens, we'll use token ID 0 as fallback
-            // This may not be correct for all cases but prevents crashes
-            for i in 0..256 {
-                if byte_token[i] == 0 {
-                    byte_token[i] = 0; // Use token 0 as fallback
-                }
+        // For models without byte tokens, we'll use token ID 0 as fallback
+        // This may not be correct for all cases but prevents crashes
+        for token in &mut byte_token {
+            if *token == 0 {
+                *token = 0; // Use token 0 as fallback
             }
         }
 

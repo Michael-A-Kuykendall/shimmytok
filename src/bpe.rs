@@ -199,7 +199,7 @@ impl BPETokenizer {
             
             // Default case (from llama.cpp line 419-423)
             // Used when model file doesn't specify pre-tokenizer type
-            "default" | _ => vec![
+            _ => vec![
                 r"[\p{P}\$\+<=>^~\|]+",
                 r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)",
                 r"\p{N}+",
