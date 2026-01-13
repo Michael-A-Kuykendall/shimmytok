@@ -14,9 +14,7 @@ fn get_model_path() -> String {
 fn bench_encode(c: &mut Criterion) {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping encode benchmarks: model not found at {model_path}"
-        );
+        eprintln!("Skipping encode benchmarks: model not found at {model_path}");
         return;
     }
 
@@ -36,9 +34,7 @@ fn bench_encode(c: &mut Criterion) {
 fn bench_decode(c: &mut Criterion) {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping decode benchmarks: model not found at {model_path}"
-        );
+        eprintln!("Skipping decode benchmarks: model not found at {model_path}");
         return;
     }
 
@@ -56,9 +52,7 @@ fn bench_decode(c: &mut Criterion) {
 fn bench_load(c: &mut Criterion) {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping load benchmarks: model not found at {model_path}"
-        );
+        eprintln!("Skipping load benchmarks: model not found at {model_path}");
         return;
     }
 
@@ -70,9 +64,7 @@ fn bench_load(c: &mut Criterion) {
 fn bench_encode_batch(c: &mut Criterion) {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping batch benchmarks: model not found at {model_path}"
-        );
+        eprintln!("Skipping batch benchmarks: model not found at {model_path}");
         return;
     }
 

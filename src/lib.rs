@@ -50,11 +50,11 @@ pub mod ugm;
 pub mod vocab;
 pub mod wpm;
 
-pub use vocab::{TokenType, Vocabulary};
-pub use wpm::WpmTokenizer;
+pub use plamo2::Plamo2Tokenizer;
 pub use rwkv::RwkvTokenizer;
 pub use ugm::UgmTokenizer;
-pub use plamo2::Plamo2Tokenizer;
+pub use vocab::{TokenType, Vocabulary};
+pub use wpm::WpmTokenizer;
 
 /// Token ID type used throughout the library
 /// Maximum input text size in bytes (10MB) - Issue R4#2
@@ -81,7 +81,7 @@ impl EncodeOptions {
             parse_special: false,
         }
     }
-    
+
     /// Create options that parse special tokens in input
     #[must_use]
     pub fn with_parse_special(add_special_tokens: bool, parse_special: bool) -> Self {
@@ -113,7 +113,7 @@ impl DecodeOptions {
             include_special_text: true,
         }
     }
-    
+
     /// Create full decode options
     #[must_use]
     pub fn new(skip_special_tokens: bool, lstrip: bool, include_special_text: bool) -> Self {
@@ -250,13 +250,21 @@ impl Tokenizer {
             "gpt2" => Box::new(bpe::BPETokenizer::new()),
             "qwen" | "qwen2" => Box::new(bpe::BPETokenizer::new()),
             // WPM (WordPiece) models - BERT-style
-            "bert" | "wpm" => Box::new(WpmWrapper { inner: wpm::WpmTokenizer::new(&vocab) }),
+            "bert" | "wpm" => Box::new(WpmWrapper {
+                inner: wpm::WpmTokenizer::new(&vocab),
+            }),
             // RWKV models - trie-based greedy
-            "rwkv" => Box::new(RwkvWrapper { inner: rwkv::RwkvTokenizer::new(&vocab) }),
+            "rwkv" => Box::new(RwkvWrapper {
+                inner: rwkv::RwkvTokenizer::new(&vocab),
+            }),
             // UGM (Unigram) models - T5-style Viterbi
-            "t5" | "ugm" => Box::new(UgmWrapper { inner: ugm::UgmTokenizer::new(&vocab) }),
+            "t5" | "ugm" => Box::new(UgmWrapper {
+                inner: ugm::UgmTokenizer::new(&vocab),
+            }),
             // PLaMo-2 models - table-driven DP
-            "plamo2" => Box::new(Plamo2Wrapper { inner: plamo2::Plamo2Tokenizer::new(&vocab)? }),
+            "plamo2" => Box::new(Plamo2Wrapper {
+                inner: plamo2::Plamo2Tokenizer::new(&vocab)?,
+            }),
             model => return Err(Error::UnsupportedModel(model.to_string())),
         };
 
@@ -291,7 +299,10 @@ impl Tokenizer {
     /// ```
     #[must_use = "encode returns a Result that must be handled"]
     pub fn encode(&self, text: &str, add_special_tokens: bool) -> Result<Vec<TokenId>, Error> {
-        self.encode_with_options(text, &EncodeOptions::with_special_tokens(add_special_tokens))
+        self.encode_with_options(
+            text,
+            &EncodeOptions::with_special_tokens(add_special_tokens),
+        )
     }
 
     /// Encode text into a sequence of token IDs with full options
@@ -312,7 +323,7 @@ impl Tokenizer {
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
-    /// 
+    ///
     /// // Parse special tokens like <|eot_id|> in input
     /// let opts = EncodeOptions::with_parse_special(true, true);
     /// let tokens = tokenizer.encode_with_options("Hello<|eot_id|>World", &opts)?;
@@ -320,7 +331,11 @@ impl Tokenizer {
     /// # }
     /// ```
     #[must_use = "encode_with_options returns a Result that must be handled"]
-    pub fn encode_with_options(&self, text: &str, options: &EncodeOptions) -> Result<Vec<TokenId>, Error> {
+    pub fn encode_with_options(
+        &self,
+        text: &str,
+        options: &EncodeOptions,
+    ) -> Result<Vec<TokenId>, Error> {
         let mut tokens = Vec::new();
 
         if options.add_special_tokens && self.vocab.add_bos_token() {
@@ -331,7 +346,7 @@ impl Tokenizer {
             // Build special token map and find occurrences in text
             let special_map = self.vocab.special_token_map();
             let fragments = split_on_special_tokens(text, &special_map);
-            
+
             for fragment in fragments {
                 match fragment {
                     TextFragment::Special(token_id) => {
@@ -383,7 +398,10 @@ impl Tokenizer {
     /// ```
     #[must_use = "decode returns a Result that must be handled"]
     pub fn decode(&self, tokens: &[TokenId], skip_special_tokens: bool) -> Result<String, Error> {
-        self.decode_with_options(tokens, &DecodeOptions::with_skip_special(skip_special_tokens))
+        self.decode_with_options(
+            tokens,
+            &DecodeOptions::with_skip_special(skip_special_tokens),
+        )
     }
 
     /// Decode a sequence of token IDs back into text with full options
@@ -405,7 +423,7 @@ impl Tokenizer {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
     /// let tokens = vec![15043, 3186];
-    /// 
+    ///
     /// // Decode with lstrip to remove leading whitespace from tokens
     /// let opts = DecodeOptions::new(true, true, false);
     /// let text = tokenizer.decode_with_options(&tokens, &opts)?;
@@ -413,7 +431,11 @@ impl Tokenizer {
     /// # }
     /// ```
     #[must_use = "decode_with_options returns a Result that must be handled"]
-    pub fn decode_with_options(&self, tokens: &[TokenId], options: &DecodeOptions) -> Result<String, Error> {
+    pub fn decode_with_options(
+        &self,
+        tokens: &[TokenId],
+        options: &DecodeOptions,
+    ) -> Result<String, Error> {
         // Filter tokens based on options
         let filtered_tokens: Vec<TokenId> = if options.skip_special_tokens {
             tokens
@@ -425,7 +447,7 @@ impl Tokenizer {
             tokens.to_vec()
         };
 
-        // If we need special handling (lstrip or include_special_text=false), 
+        // If we need special handling (lstrip or include_special_text=false),
         // we need to decode token by token
         let mut result = if options.lstrip || !options.include_special_text {
             let mut result = String::new();
@@ -437,7 +459,7 @@ impl Tokenizer {
 
                 // Get the token piece
                 let piece = self.tokenizer_impl.decode(&[token_id], &self.vocab)?;
-                
+
                 // Apply lstrip if requested
                 let piece = if options.lstrip {
                     piece.trim_start().to_string()
@@ -466,7 +488,7 @@ impl Tokenizer {
     /// # Returns
     ///
     /// The total number of tokens in the vocabulary.
-    #[must_use] 
+    #[must_use]
     pub fn vocab_size(&self) -> usize {
         self.vocab.n_tokens()
     }
@@ -476,7 +498,7 @@ impl Tokenizer {
     /// # Returns
     ///
     /// The token ID used to mark the beginning of a sequence.
-    #[must_use] 
+    #[must_use]
     pub fn bos_token(&self) -> TokenId {
         self.vocab.bos_token_id()
     }
@@ -486,7 +508,7 @@ impl Tokenizer {
     /// # Returns
     ///
     /// The token ID used to mark the end of a sequence.
-    #[must_use] 
+    #[must_use]
     pub fn eos_token(&self) -> TokenId {
         self.vocab.eos_token_id()
     }
@@ -510,7 +532,7 @@ impl Tokenizer {
     /// # Ok(())
     /// # }
     /// ```
-    #[must_use] 
+    #[must_use]
     pub fn model_type(&self) -> &str {
         self.vocab.model_type()
     }
@@ -523,7 +545,7 @@ impl Tokenizer {
     /// # Returns
     ///
     /// The pre-type string like "llama3", "gpt-2", "deepseek-coder", etc., or None if not set.
-    #[must_use] 
+    #[must_use]
     pub fn pre_type(&self) -> Option<&str> {
         self.vocab.pre_type()
     }
@@ -671,7 +693,7 @@ impl Tokenizer {
     /// # Ok(())
     /// # }
     /// ```
-    #[must_use] 
+    #[must_use]
     pub fn token_type(&self, token: TokenId) -> TokenType {
         if token >= self.vocab.n_tokens() as TokenId {
             return TokenType::Undefined;
@@ -703,7 +725,7 @@ impl Tokenizer {
     /// # Ok(())
     /// # }
     /// ```
-    #[must_use] 
+    #[must_use]
     pub fn is_special_token(&self, token: TokenId) -> bool {
         if token >= self.vocab.n_tokens() as TokenId {
             return false;

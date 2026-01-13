@@ -134,7 +134,7 @@ impl UgmTokenizer {
         // Preprocess: split on user-defined tokens first (llama.cpp parity)
         // User-defined tokens like <|endoftext|> must be matched greedily before Viterbi
         let fragments = self.split_on_user_defined(&normalized);
-        
+
         let mut result = Vec::new();
         for fragment in fragments {
             match fragment {
@@ -147,7 +147,7 @@ impl UgmTokenizer {
                 }
             }
         }
-        
+
         Ok(result)
     }
 
@@ -163,14 +163,14 @@ impl UgmTokenizer {
             // Try to match a user-defined token at this position
             let mut best_len = 0;
             let mut best_id = None;
-            
+
             if let Some(mut node) = self.user_defined_trie.traverse(0, bytes[pos]) {
                 let mut len = 1;
                 if let Some(id) = self.user_defined_trie.value(node) {
                     best_len = len;
                     best_id = Some(id);
                 }
-                
+
                 while pos + len < n {
                     match self.user_defined_trie.traverse(node, bytes[pos + len]) {
                         Some(next) => {
@@ -185,7 +185,7 @@ impl UgmTokenizer {
                     }
                 }
             }
-            
+
             if let Some(token_id) = best_id {
                 // Emit any text before this user-defined token
                 if pos > text_start {
@@ -198,12 +198,12 @@ impl UgmTokenizer {
                 pos += 1;
             }
         }
-        
+
         // Emit remaining text
         if text_start < n {
             fragments.push(UgmFragment::Text(text[text_start..].to_string()));
         }
-        
+
         fragments
     }
 
@@ -338,7 +338,7 @@ fn utf8_cp_len(first: u8) -> usize {
 }
 
 /// Placeholder normalization.
-/// 
+///
 /// For exact llama.cpp parity, route this through GGUF charsmap/XCDA parsing.
 fn normalize_ugm(text: &str) -> String {
     text.to_string()

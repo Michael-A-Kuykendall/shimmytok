@@ -9,7 +9,7 @@ fn main() {
         r"[一-龥ࠀ-一가-퟿]+",
         r"\p{N}+",
     ];
-    
+
     for (i, pattern) in patterns.iter().enumerate() {
         match fancy_regex::Regex::new(pattern) {
             Ok(_) => println!("Pattern {} OK: len={}", i, pattern.len()),

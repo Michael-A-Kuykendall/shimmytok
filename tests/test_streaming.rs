@@ -14,9 +14,7 @@ fn get_model_path() -> String {
 fn test_decode_single() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_decode_single: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_decode_single: model not found at {model_path}");
         return;
     }
 
@@ -73,9 +71,7 @@ fn test_decode_single_with_special_tokens() {
 fn test_token_to_piece() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_token_to_piece: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_token_to_piece: model not found at {model_path}");
         return;
     }
 
@@ -100,9 +96,7 @@ fn test_token_to_piece() {
 fn test_token_type() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_token_type: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_token_type: model not found at {model_path}");
         return;
     }
 
@@ -134,9 +128,7 @@ fn test_token_type() {
 fn test_is_special_token() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_is_special_token: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_is_special_token: model not found at {model_path}");
         return;
     }
 
@@ -177,9 +169,7 @@ fn test_is_special_token() {
 fn test_streaming_simulation() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_streaming_simulation: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_streaming_simulation: model not found at {model_path}");
         return;
     }
 

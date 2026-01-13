@@ -197,7 +197,8 @@ pub fn load_metadata<P: AsRef<Path>>(path: P) -> Result<GGUFMetadata, Error> {
         _ => None,
     };
 
-    let treat_whitespace_as_suffix = match kv_pairs.get("tokenizer.ggml.treat_whitespace_as_suffix") {
+    let treat_whitespace_as_suffix = match kv_pairs.get("tokenizer.ggml.treat_whitespace_as_suffix")
+    {
         Some(Value::Bool(v)) => Some(*v),
         _ => None,
     };

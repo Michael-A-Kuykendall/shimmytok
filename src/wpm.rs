@@ -29,7 +29,9 @@ impl WpmTokenizer {
                 max_len = max_len.max(t.len());
             }
         }
-        Self { max_token_len: max_len }
+        Self {
+            max_token_len: max_len,
+        }
     }
 
     /// Encode text into token IDs using WPM algorithm.

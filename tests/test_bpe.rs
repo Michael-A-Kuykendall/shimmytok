@@ -3,16 +3,18 @@ use std::path::Path;
 
 fn get_model_path() -> String {
     std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE")).map_or_else(|_| "gpt2.Q4_K_M.gguf".to_string(), |home| format!("{home}/.cache/models/gguf/gpt2.Q4_K_M.gguf"))
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .map_or_else(
+            |_| "gpt2.Q4_K_M.gguf".to_string(),
+            |home| format!("{home}/.cache/models/gguf/gpt2.Q4_K_M.gguf"),
+        )
 }
 
 #[test]
 fn test_gpt2_tokenization() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_gpt2_tokenization: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_gpt2_tokenization: model not found at {model_path}");
         return;
     }
 

@@ -4,16 +4,18 @@ use std::path::Path;
 
 fn get_model_path() -> String {
     std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE")).map_or_else(|_| "gpt2.Q4_K_M.gguf".to_string(), |home| format!("{home}/.cache/models/gguf/gpt2.Q4_K_M.gguf"))
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .map_or_else(
+            |_| "gpt2.Q4_K_M.gguf".to_string(),
+            |home| format!("{home}/.cache/models/gguf/gpt2.Q4_K_M.gguf"),
+        )
 }
 
 #[test]
 fn test_invalid_token_id() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_invalid_token_id: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_invalid_token_id: model not found at {model_path}");
         return;
     }
     let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
@@ -40,9 +42,7 @@ fn test_missing_file() {
 fn test_very_large_input() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_very_large_input: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_very_large_input: model not found at {model_path}");
         return;
     }
     let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
@@ -68,9 +68,7 @@ fn test_very_large_input() {
 fn test_empty_input() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_empty_input: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_empty_input: model not found at {model_path}");
         return;
     }
     let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
@@ -92,9 +90,7 @@ fn test_empty_input() {
 fn test_round_trip_fuzz() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_round_trip_fuzz: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_round_trip_fuzz: model not found at {model_path}");
         return;
     }
     let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
@@ -142,9 +138,7 @@ fn test_round_trip_fuzz() {
 fn test_decode_with_special_tokens() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_decode_with_special_tokens: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_decode_with_special_tokens: model not found at {model_path}");
         return;
     }
     let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");
@@ -182,9 +176,7 @@ fn test_decode_with_special_tokens() {
 fn test_max_token_validation() {
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_max_token_validation: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_max_token_validation: model not found at {model_path}");
         return;
     }
     let tokenizer = Tokenizer::from_gguf_file(model_path).expect("Failed to load model");

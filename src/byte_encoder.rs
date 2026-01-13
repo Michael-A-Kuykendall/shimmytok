@@ -50,7 +50,7 @@ pub fn unicode_to_bytes() -> &'static HashMap<char, u8> {
 }
 
 /// Encode text bytes to GPT-2 unicode representation
-#[must_use] 
+#[must_use]
 pub fn encode_bytes(text: &str) -> String {
     let byte_encoder = bytes_to_unicode();
     text.bytes()
@@ -60,7 +60,7 @@ pub fn encode_bytes(text: &str) -> String {
 
 /// Decode GPT-2 byte-encoded text back to a regular string.
 /// Note: For very large inputs (>100MB), consider streaming to avoid memory spikes.
-#[must_use] 
+#[must_use]
 pub fn decode_bytes(text: &str) -> String {
     let byte_decoder = unicode_to_bytes();
     let bytes: Vec<u8> = text

@@ -127,18 +127,18 @@ fn test_token_to_piece() {
 fn test_byte_token_decode_unit() {
     // Unit test for the byte token parsing logic
     // This tests the pattern <0xXX> -> byte value
-    
+
     // Valid byte tokens
     assert_eq!(parse_byte_token("<0x0A>"), Some(0x0A)); // newline
     assert_eq!(parse_byte_token("<0x00>"), Some(0x00)); // null
     assert_eq!(parse_byte_token("<0xFF>"), Some(0xFF)); // max byte
     assert_eq!(parse_byte_token("<0x20>"), Some(0x20)); // space
-    
+
     // Invalid - not byte tokens
     assert_eq!(parse_byte_token("hello"), None);
-    assert_eq!(parse_byte_token("<0x0>"), None);   // too short
+    assert_eq!(parse_byte_token("<0x0>"), None); // too short
     assert_eq!(parse_byte_token("<0x0AG>"), None); // invalid hex
-    assert_eq!(parse_byte_token("0x0A"), None);    // missing brackets
+    assert_eq!(parse_byte_token("0x0A"), None); // missing brackets
 }
 
 /// Helper to test byte token parsing (mirrors internal decode_byte_token)
@@ -159,7 +159,7 @@ fn test_spm_newline_round_trip() {
         return;
     }
     let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load model");
-    
+
     // Skip if not SPM model
     let model_type = tokenizer.model_type();
     if model_type != "llama" && model_type != "mistral" && model_type != "gemma" {
@@ -170,11 +170,11 @@ fn test_spm_newline_round_trip() {
     let text = "Hello\nWorld";
     let tokens = tokenizer.encode(text, false).expect("Encode failed");
     let decoded = tokenizer.decode(&tokens, false).expect("Decode failed");
-    
+
     println!("Original: {:?}", text);
     println!("Tokens: {:?}", tokens);
     println!("Decoded: {:?}", decoded);
-    
+
     // The decoded text should contain the newline
     assert!(
         decoded.contains('\n') || decoded.contains("\\n"),
@@ -195,7 +195,7 @@ fn test_space_prefix_flag_honored() {
         return;
     }
     let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load model");
-    
+
     // Skip if not SPM model
     let model_type = tokenizer.model_type();
     if model_type != "llama" && model_type != "mistral" && model_type != "gemma" {
@@ -207,11 +207,11 @@ fn test_space_prefix_flag_honored() {
     let text = "Hello";
     let tokens = tokenizer.encode(text, false).expect("Encode failed");
     let decoded = tokenizer.decode(&tokens, false).expect("Decode failed");
-    
+
     println!("Input: {:?}", text);
     println!("Tokens: {:?}", tokens);
     println!("Decoded: {:?}", decoded);
-    
+
     // For most SPM models with add_space_prefix=true, decoded should have leading space
     // This is because the ▁ prefix gets decoded as space
     // The exact behavior depends on the model's add_space_prefix setting
@@ -224,11 +224,11 @@ fn test_space_prefix_flag_honored() {
 fn test_parse_special_splits_correctly() {
     // Unit test for the special token splitting logic
     use std::collections::HashMap;
-    
+
     let mut special_map = HashMap::new();
     special_map.insert("<|eot|>".to_string(), 100u32);
     special_map.insert("<|start|>".to_string(), 101u32);
-    
+
     // Test: text with special token in middle
     // We can't call split_on_special_tokens directly (private), but we can
     // test via encode_with_options if we have a model
@@ -237,7 +237,7 @@ fn test_parse_special_splits_correctly() {
 #[test]
 fn test_encode_with_options_api() {
     use shimmytok::EncodeOptions;
-    
+
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!("Skipping test: model not found at {model_path}");
@@ -250,18 +250,23 @@ fn test_encode_with_options_api() {
     let tokens = tokenizer
         .encode_with_options("Hello world", &opts)
         .expect("Encode failed");
-    
+
     // Should match regular encode
-    let tokens_regular = tokenizer.encode("Hello world", false).expect("Encode failed");
-    assert_eq!(tokens, tokens_regular, "encode_with_options should match encode");
-    
+    let tokens_regular = tokenizer
+        .encode("Hello world", false)
+        .expect("Encode failed");
+    assert_eq!(
+        tokens, tokens_regular,
+        "encode_with_options should match encode"
+    );
+
     println!("encode_with_options API works correctly");
 }
 
 #[test]
 fn test_parse_special_enabled() {
     use shimmytok::EncodeOptions;
-    
+
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!("Skipping test: model not found at {model_path}");
@@ -277,19 +282,19 @@ fn test_parse_special_enabled() {
     }
     let eos_text = eos_piece.unwrap();
     println!("EOS token text: {:?}", eos_text);
-    
+
     // Create input with the EOS token string embedded
     let input = format!("Hello{}World", eos_text);
     println!("Input with embedded EOS: {:?}", input);
-    
+
     // Encode with parse_special=true
     let opts = EncodeOptions::with_parse_special(false, true);
     let tokens = tokenizer
         .encode_with_options(&input, &opts)
         .expect("Encode with parse_special failed");
-    
+
     println!("Tokens with parse_special: {:?}", tokens);
-    
+
     // The EOS token should appear in the output
     assert!(
         tokens.contains(&tokenizer.eos_token()),
@@ -304,7 +309,7 @@ fn test_parse_special_enabled() {
 #[test]
 fn test_decode_with_options_api() {
     use shimmytok::DecodeOptions;
-    
+
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!("Skipping test: model not found at {model_path}");
@@ -313,24 +318,29 @@ fn test_decode_with_options_api() {
     let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load model");
 
     // Encode some text
-    let tokens = tokenizer.encode("Hello world", false).expect("Encode failed");
-    
+    let tokens = tokenizer
+        .encode("Hello world", false)
+        .expect("Encode failed");
+
     // Test decode_with_options matches regular decode
     let opts = DecodeOptions::with_skip_special(false);
     let decoded = tokenizer
         .decode_with_options(&tokens, &opts)
         .expect("Decode failed");
-    
+
     let decoded_regular = tokenizer.decode(&tokens, false).expect("Decode failed");
-    assert_eq!(decoded, decoded_regular, "decode_with_options should match decode");
-    
+    assert_eq!(
+        decoded, decoded_regular,
+        "decode_with_options should match decode"
+    );
+
     println!("decode_with_options API works correctly");
 }
 
 #[test]
 fn test_decode_lstrip_option() {
     use shimmytok::DecodeOptions;
-    
+
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!("Skipping test: model not found at {model_path}");
@@ -339,23 +349,25 @@ fn test_decode_lstrip_option() {
     let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load model");
 
     // Encode text that will have leading spaces in tokens
-    let tokens = tokenizer.encode(" Hello world", false).expect("Encode failed");
-    
+    let tokens = tokenizer
+        .encode(" Hello world", false)
+        .expect("Encode failed");
+
     // Decode without lstrip
     let opts_normal = DecodeOptions::with_skip_special(false);
     let decoded_normal = tokenizer
         .decode_with_options(&tokens, &opts_normal)
         .expect("Decode failed");
-    
+
     // Decode with lstrip
     let opts_lstrip = DecodeOptions::new(false, true, true);
     let decoded_lstrip = tokenizer
         .decode_with_options(&tokens, &opts_lstrip)
         .expect("Decode failed");
-    
+
     println!("Normal decode: {:?}", decoded_normal);
     println!("Lstrip decode: {:?}", decoded_lstrip);
-    
+
     // Lstrip version should have less or equal leading whitespace
     let normal_leading = decoded_normal.len() - decoded_normal.trim_start().len();
     let lstrip_leading = decoded_lstrip.len() - decoded_lstrip.trim_start().len();
@@ -368,7 +380,7 @@ fn test_decode_lstrip_option() {
 #[test]
 fn test_decode_skip_special_text() {
     use shimmytok::DecodeOptions;
-    
+
     let model_path = get_model_path();
     if !Path::new(&model_path).exists() {
         eprintln!("Skipping test: model not found at {model_path}");
@@ -379,22 +391,22 @@ fn test_decode_skip_special_text() {
     // Encode with BOS token
     let tokens = tokenizer.encode("Hello", true).expect("Encode failed");
     println!("Tokens with special: {:?}", tokens);
-    
+
     // Decode including special tokens but NOT their text
     let opts = DecodeOptions::new(false, false, false);
     let decoded = tokenizer
         .decode_with_options(&tokens, &opts)
         .expect("Decode failed");
-    
+
     // Decode with special tokens and their text
     let opts_with_text = DecodeOptions::new(false, false, true);
     let decoded_with_text = tokenizer
         .decode_with_options(&tokens, &opts_with_text)
         .expect("Decode failed");
-    
+
     println!("Without special text: {:?}", decoded);
     println!("With special text: {:?}", decoded_with_text);
-    
+
     // The version without special text should be shorter or equal
     // (special tokens might have empty text anyway)
     assert!(

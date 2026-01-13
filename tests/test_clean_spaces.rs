@@ -7,10 +7,10 @@ fn test_clean_spaces_punctuation() {
     // " !" → "!"
     // " ." → "."
     // " ," → ","
-    
+
     // This tests the apply_clean_spaces function behavior
     // We test through decode since that's where it's wired
-    
+
     // Direct string transformation tests:
     let cases = vec![
         ("Hello ?", "Hello?"),
@@ -19,7 +19,7 @@ fn test_clean_spaces_punctuation() {
         ("One , two", "One, two"),
         ("Multiple ?!.", "Multiple?!."),
     ];
-    
+
     for (input, expected) in cases {
         let result = clean_spaces_helper(input);
         assert_eq!(result, expected, "Failed for input: {:?}", input);
@@ -33,14 +33,14 @@ fn test_clean_spaces_apostrophe_contractions() {
     // " 's" → "'s"
     // " 've" → "'ve"
     // " 're" → "'re"
-    
+
     let cases = vec![
         ("I 'm happy", "I'm happy"),
         ("It 's working", "It's working"),
         ("They 've arrived", "They've arrived"),
         ("You 're welcome", "You're welcome"),
     ];
-    
+
     for (input, expected) in cases {
         let result = clean_spaces_helper(input);
         assert_eq!(result, expected, "Failed for input: {:?}", input);
@@ -50,10 +50,8 @@ fn test_clean_spaces_apostrophe_contractions() {
 #[test]
 fn test_clean_spaces_isolated_apostrophe() {
     // Test: isolated apostrophe " ' " → "'"
-    let cases = vec![
-        ("word ' word", "word'word"),
-    ];
-    
+    let cases = vec![("word ' word", "word'word")];
+
     for (input, expected) in cases {
         let result = clean_spaces_helper(input);
         assert_eq!(result, expected, "Failed for input: {:?}", input);
@@ -67,7 +65,7 @@ fn test_clean_spaces_combined() {
         ("Hello ! I 'm here .", "Hello! I'm here."),
         ("What 's that ?", "What's that?"),
     ];
-    
+
     for (input, expected) in cases {
         let result = clean_spaces_helper(input);
         assert_eq!(result, expected, "Failed for input: {:?}", input);

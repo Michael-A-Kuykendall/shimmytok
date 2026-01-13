@@ -22,12 +22,12 @@ fn run_llama_cpp_tokenize(model_path: &str, text: &str) -> Vec<u32> {
         .arg("-p")
         .arg(text)
         .arg("--ids")
-        .arg("--no-bos")  // Don't add BOS - we'll test that separately
+        .arg("--no-bos") // Don't add BOS - we'll test that separately
         .output()
         .expect("Failed to run llama-tokenize");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    
+
     // Parse output like "[1, 2, 3]"
     stdout
         .trim()
@@ -42,28 +42,28 @@ fn run_llama_cpp_tokenize(model_path: &str, text: &str) -> Vec<u32> {
 #[ignore = "Requires model file - run with: cargo test test_gpt2_validation -- --ignored"]
 fn test_gpt2_validation() {
     let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/gpt2.Q4_K_M.gguf";
-    
+
     if !std::path::Path::new(&model_path).exists() {
         println!("Skipping: model not found at {model_path}");
         return;
     }
 
-    let tokenizer = Tokenizer::from_gguf_file(&model_path)
-        .expect("Failed to load tokenizer");
+    let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let mut passed = 0;
     let mut failed = 0;
 
     for (i, text) in TEST_STRINGS.iter().enumerate() {
         println!("\nTest {}: \"{}\"", i + 1, text);
-        
+
         // Shimmytok
-        let shimmy_tokens = tokenizer.encode(text, false)
+        let shimmy_tokens = tokenizer
+            .encode(text, false)
             .expect("Failed to encode with shimmytok");
-        
+
         // llama.cpp
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
-        
+
         if shimmy_tokens == llama_tokens {
             println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;
@@ -74,7 +74,7 @@ fn test_gpt2_validation() {
             failed += 1;
         }
     }
-    
+
     // Adjust totals for partial run
     let total_tests = TEST_STRINGS.len();
 
@@ -90,27 +90,28 @@ fn test_gpt2_validation() {
 #[test]
 #[ignore = "Requires model file"]
 fn test_qwen2_validation() {
-    let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/qwen2-7b-instruct-q4_k_m.gguf";
-    
+    let model_path =
+        std::env::var("HOME").unwrap() + "/.cache/models/gguf/qwen2-7b-instruct-q4_k_m.gguf";
+
     if !std::path::Path::new(&model_path).exists() {
         println!("Skipping: model not found at {model_path}");
         return;
     }
 
-    let tokenizer = Tokenizer::from_gguf_file(&model_path)
-        .expect("Failed to load tokenizer");
+    let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let mut passed = 0;
     let mut failed = 0;
 
     for (i, text) in TEST_STRINGS.iter().enumerate() {
         println!("\nTest {}: \"{}\"", i + 1, text);
-        
-        let shimmy_tokens = tokenizer.encode(text, false)
+
+        let shimmy_tokens = tokenizer
+            .encode(text, false)
             .expect("Failed to encode with shimmytok");
-        
+
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
-        
+
         if shimmy_tokens == llama_tokens {
             println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;
@@ -134,27 +135,28 @@ fn test_qwen2_validation() {
 #[test]
 #[ignore = "Requires model file"]
 fn test_starcoder_validation() {
-    let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/starcoder2-3b-Q4_K_M.gguf";
-    
+    let model_path =
+        std::env::var("HOME").unwrap() + "/.cache/models/gguf/starcoder2-3b-Q4_K_M.gguf";
+
     if !std::path::Path::new(&model_path).exists() {
         println!("Skipping: model not found at {model_path}");
         return;
     }
 
-    let tokenizer = Tokenizer::from_gguf_file(&model_path)
-        .expect("Failed to load tokenizer");
+    let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let mut passed = 0;
     let mut failed = 0;
 
     for (i, text) in TEST_STRINGS.iter().enumerate() {
         println!("\nTest {}: \"{}\"", i + 1, text);
-        
-        let shimmy_tokens = tokenizer.encode(text, false)
+
+        let shimmy_tokens = tokenizer
+            .encode(text, false)
             .expect("Failed to encode with shimmytok");
-        
+
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
-        
+
         if shimmy_tokens == llama_tokens {
             println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;
@@ -178,27 +180,28 @@ fn test_starcoder_validation() {
 #[test]
 #[ignore = "Requires model file"]
 fn test_deepseek_coder_validation() {
-    let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/deepseek-coder-6.7b-instruct.Q4_K_M.gguf";
-    
+    let model_path = std::env::var("HOME").unwrap()
+        + "/.cache/models/gguf/deepseek-coder-6.7b-instruct.Q4_K_M.gguf";
+
     if !std::path::Path::new(&model_path).exists() {
         println!("Skipping: model not found at {model_path}");
         return;
     }
 
-    let tokenizer = Tokenizer::from_gguf_file(&model_path)
-        .expect("Failed to load tokenizer");
+    let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let mut passed = 0;
     let mut failed = 0;
 
     for (i, text) in TEST_STRINGS.iter().enumerate() {
         println!("\nTest {}: \"{}\"", i + 1, text);
-        
-        let shimmy_tokens = tokenizer.encode(text, false)
+
+        let shimmy_tokens = tokenizer
+            .encode(text, false)
             .expect("Failed to encode with shimmytok");
-        
+
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
-        
+
         if shimmy_tokens == llama_tokens {
             println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;
@@ -222,27 +225,28 @@ fn test_deepseek_coder_validation() {
 #[test]
 #[ignore = "Requires model file"]
 fn test_deepseek_llm_validation() {
-    let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/deepseek-llm-7b-chat.Q4_K_M.gguf";
-    
+    let model_path =
+        std::env::var("HOME").unwrap() + "/.cache/models/gguf/deepseek-llm-7b-chat.Q4_K_M.gguf";
+
     if !std::path::Path::new(&model_path).exists() {
         println!("Skipping: model not found at {model_path}");
         return;
     }
 
-    let tokenizer = Tokenizer::from_gguf_file(&model_path)
-        .expect("Failed to load tokenizer");
+    let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let mut passed = 0;
     let mut failed = 0;
 
     for (i, text) in TEST_STRINGS.iter().enumerate() {
         println!("\nTest {}: \"{}\"", i + 1, text);
-        
-        let shimmy_tokens = tokenizer.encode(text, false)
+
+        let shimmy_tokens = tokenizer
+            .encode(text, false)
             .expect("Failed to encode with shimmytok");
-        
+
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
-        
+
         if shimmy_tokens == llama_tokens {
             println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;
@@ -267,26 +271,26 @@ fn test_deepseek_llm_validation() {
 #[ignore = "Requires model file"]
 fn test_phi2_validation() {
     let model_path = std::env::var("HOME").unwrap() + "/.cache/models/gguf/phi-2.Q4_K_M.gguf";
-    
+
     if !std::path::Path::new(&model_path).exists() {
         println!("Skipping: model not found at {model_path}");
         return;
     }
 
-    let tokenizer = Tokenizer::from_gguf_file(&model_path)
-        .expect("Failed to load tokenizer");
+    let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load tokenizer");
 
     let mut passed = 0;
     let mut failed = 0;
 
     for (i, text) in TEST_STRINGS.iter().enumerate() {
         println!("\nTest {}: \"{}\"", i + 1, text);
-        
-        let shimmy_tokens = tokenizer.encode(text, false)
+
+        let shimmy_tokens = tokenizer
+            .encode(text, false)
             .expect("Failed to encode with shimmytok");
-        
+
         let llama_tokens = run_llama_cpp_tokenize(&model_path, text);
-        
+
         if shimmy_tokens == llama_tokens {
             println!("  ✅ MATCH: {shimmy_tokens:?}");
             passed += 1;

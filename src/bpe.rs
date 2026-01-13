@@ -78,7 +78,7 @@ impl Default for BPETokenizer {
 }
 
 impl BPETokenizer {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -106,14 +106,14 @@ impl BPETokenizer {
             "llama3" => vec![
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
             ],
-            
+
             // DeepSeek family (patterns from llama.cpp llama-vocab.cpp lines 323-332)
             // Note: Original deepseek-llm pattern has explicit Unicode ranges that include astral plane
             // characters (e.g., 𐐀-𐑏) which Rust's regex crate doesn't fully support.
             // We use \p{L} as a practical approximation that covers most use cases.
             "deepseek-llm" => vec![
                 r"[\r\n]",
-                r"\s?\p{L}+",  // Simplified from explicit Unicode ranges
+                r"\s?\p{L}+", // Simplified from explicit Unicode ranges
                 r"\s?[!-/:-~！-／：-～'-‟　-。]+",
                 r"\s+$",
                 r"[一-龥ࠀ-一가-퟿]+",
@@ -134,34 +134,36 @@ impl BPETokenizer {
             "deepseek-r1-qwen" => vec![
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
             ],
-            
+
             // Falcon
             "falcon" => vec![r"\n| ?[\p{L}\p{N}]+| ?[^\s\p{L}\p{N}]+|\s+"],
-            
+
             // StarCoder family (TWO patterns!)
-            "starcoder" | "refact" | "command-r" | "smollm" | "codeshell" | "exaone" | "minerva" => vec![
-                r"\p{N}",  // First: split individual digits
+            "starcoder" | "refact" | "command-r" | "smollm" | "codeshell" | "exaone"
+            | "minerva" => vec![
+                r"\p{N}", // First: split individual digits
                 r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)",
             ],
-            
+
             // GPT-2 family
-            "gpt-2" | "phi-2" | "jina-es" | "jina-de" | "mpt" | "olmo" | "jais" | "trillion" | "granite-docling" | "exaone4" => vec![
-                r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+",
-            ],
-            
+            "gpt-2" | "phi-2" | "jina-es" | "jina-de" | "mpt" | "olmo" | "jais" | "trillion"
+            | "granite-docling" | "exaone4" => {
+                vec![r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"]
+            }
+
             // Qwen2 family
             "qwen2" | "stablelm2" | "hunyuan" | "megrez" => vec![
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
             ],
-            
+
             // Bloom family
             "bloom" | "poro-chat" | "gpt3-finnish" => vec![r"\s+|\S+"],
-            
+
             // ChatGLM
             "chatglm4" | "glm4" | "chatglm-bpe" => vec![
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
             ],
-            
+
             // Same-as-Llama-3 patterns
             "dbrx" => vec![
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
@@ -169,10 +171,10 @@ impl BPETokenizer {
             "smaug-bpe" => vec![
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
             ],
-            
+
             // Norwegian
             "viking" => vec![r" ?[^(\s|.,!?…。，、।۔،)]+"],
-            
+
             // Advanced/Specialized
             "tekken" => vec![
                 r"[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))*((?=[\p{L}])([^A-Z]))+|[^\r\n\p{L}\p{N}]?((?=[\p{L}])([^a-z]))+((?=[\p{L}])([^A-Z]))*|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n/]*|\s*[\r\n]+|\s+(?!\S)|\s+",
@@ -199,7 +201,7 @@ impl BPETokenizer {
             "grok-2" => vec![
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
             ],
-            
+
             // Default case (from llama.cpp line 419-423)
             // Used when model file doesn't specify pre-tokenizer type
             _ => vec![
@@ -270,49 +272,52 @@ impl BPETokenizer {
         // For multiple patterns, use offset-based approach like llama.cpp
         // Each pattern refines the boundaries, preserving both matches and non-matches
         let mut offsets: Vec<(usize, usize)> = vec![(0, text.len())];
-        
+
         for regex in regexes {
             let mut new_offsets = Vec::new();
-            
+
             for (start, end) in offsets {
                 let fragment = &text[start..end];
-                
+
                 // Collect all matches in this fragment
                 let matches: Vec<_> = regex
                     .find_iter(fragment)
                     .filter_map(std::result::Result::ok)
                     .collect();
-                
+
                 if matches.is_empty() {
                     // No matches - keep the original offset unchanged
                     new_offsets.push((start, end));
                 } else {
                     // Split into matched and unmatched regions
                     let mut last_pos = 0;
-                    
+
                     for m in matches {
                         // Add unmatched gap before this match
                         if m.start() > last_pos {
                             new_offsets.push((start + last_pos, start + m.start()));
                         }
-                        
+
                         // Add the match
                         new_offsets.push((start + m.start(), start + m.end()));
                         last_pos = m.end();
                     }
-                    
+
                     // Add final unmatched portion
                     if last_pos < fragment.len() {
                         new_offsets.push((start + last_pos, end));
                     }
                 }
             }
-            
+
             offsets = new_offsets;
         }
 
         // Convert offsets to strings
-        Ok(offsets.iter().map(|(start, end)| text[*start..*end].to_string()).collect())
+        Ok(offsets
+            .iter()
+            .map(|(start, end)| text[*start..*end].to_string())
+            .collect())
     }
 
     /// Apply Byte Pair Encoding merge algorithm to a single text fragment.
@@ -418,10 +423,24 @@ impl BPETokenizer {
 
                     // Add new potential merges with neighbors
                     if let Some(prev) = symbols[left].prev {
-                        self.try_add_bigram(prev, left, text, &symbols, &merge_ranks, &mut work_queue);
+                        self.try_add_bigram(
+                            prev,
+                            left,
+                            text,
+                            &symbols,
+                            &merge_ranks,
+                            &mut work_queue,
+                        );
                     }
                     if let Some(next) = symbols[left].next {
-                        self.try_add_bigram(left, next, text, &symbols, &merge_ranks, &mut work_queue);
+                        self.try_add_bigram(
+                            left,
+                            next,
+                            text,
+                            &symbols,
+                            &merge_ranks,
+                            &mut work_queue,
+                        );
                     }
                 }
             }

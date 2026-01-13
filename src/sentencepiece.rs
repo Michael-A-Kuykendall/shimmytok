@@ -90,7 +90,7 @@ impl Default for SentencePieceTokenizer {
 }
 
 impl SentencePieceTokenizer {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self
     }

@@ -61,9 +61,7 @@ fn test_encode_batch() {
     });
 
     if !std::path::Path::new(&model_path).exists() {
-        eprintln!(
-            "Skipping test_encode_batch: model not found at {model_path}"
-        );
+        eprintln!("Skipping test_encode_batch: model not found at {model_path}");
         return;
     }
 
