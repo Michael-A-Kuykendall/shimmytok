@@ -1,8 +1,37 @@
 # Tokenizer Validation Audit Plan
 
-**Purpose**: Systematically validate all shimmytok tokenizers against llama.cpp ground truth.
+**Status**: ✅ **10/10 models validated against llama.cpp**
 
-**Tools Available**:
+**Last validated**: January 12, 2026
+
+---
+
+## Validated Models
+
+| Model | Tokenizer | Status | Notes |
+|-------|-----------|--------|-------|
+| ggml-vocab-bert-bge.gguf | WPM | ✅ MATCH | WordPiece/BERT |
+| ggml-vocab-gpt-2.gguf | BPE | ✅ MATCH | GPT-2 style |
+| ggml-vocab-llama-spm.gguf | SPM | ✅ MATCH | SentencePiece |
+| ggml-vocab-qwen2.gguf | BPE | ✅ MATCH | Qwen2 style |
+| ggml-vocab-starcoder.gguf | BPE | ✅ MATCH | 2-pattern sequential |
+| ggml-vocab-deepseek-coder.gguf | BPE | ✅ MATCH | 5-pattern sequential |
+| ggml-vocab-deepseek-llm.gguf | BPE | ✅ MATCH | 6-pattern (simplified) |
+| ggml-vocab-falcon.gguf | BPE | ✅ MATCH | Falcon pattern |
+| ggml-vocab-command-r.gguf | BPE | ✅ MATCH | Command-R |
+| ggml-vocab-refact.gguf | BPE | ✅ MATCH | Refact |
+
+## Not Yet Validated (Need Model Files)
+
+| Tokenizer | Status | Notes |
+|-----------|--------|-------|
+| RWKV | ⬜ Need model | Trie-based greedy |
+| UGM (T5) | ⬜ Need model | Unigram Viterbi |
+| PLaMo-2 | ⬜ Need model | Table-driven DP |
+
+---
+
+## Tools Available
 - llama.cpp tokenize: `../llama.cpp/build/bin/Release/llama-tokenize.exe`
 - Model files: `../llama.cpp/models/ggml-vocab-*.gguf`
 
