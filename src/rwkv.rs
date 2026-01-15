@@ -1,11 +1,20 @@
 //! RWKV tokenizer implementation.
 //!
-//! Port of llama.cpp RWKV tokenizer.
-//! Source: llama_unescape_rwkv_token + llm_tokenizer_rwkv_session::tokenize
+//! # ⚠️ Experimental
 //!
-//! Key features:
+//! **Status**: Implementation complete, but **no GGUF test models available** for validation.
+//! RWKV World models are not commonly distributed in GGUF format with test fixtures.
+//! This module cannot be validated against llama.cpp without commodity-accessible test files.
+//!
+//! # Algorithm
+//!
+//! Port of llama.cpp RWKV tokenizer.
+//! Source: `llama_unescape_rwkv_token` + `llm_tokenizer_rwkv_session::tokenize`
+//!
+//! # Key Features
+//!
 //! - Trie-based greedy longest match
-//! - Special escape sequences: \n, \t, \r, \xNN
+//! - Special escape sequences: `\n`, `\t`, `\r`, `\xNN`
 
 use crate::vocab::Vocabulary;
 use crate::Error;

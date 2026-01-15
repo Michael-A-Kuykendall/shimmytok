@@ -1,11 +1,31 @@
-//! GPT-2 byte-level encoding
-//! Direct port of `OpenAI`'s `bytes_to_unicode()` function
+//! GPT-2 byte-level encoding utilities.
+//!
+//! This module provides the byte-to-unicode mapping used by GPT-2 style BPE tokenizers.
+//! It's a direct port of OpenAI's `bytes_to_unicode()` function from the original
+//! GPT-2 tokenizer implementation.
+//!
+//! # Background
+//!
+//! GPT-2's tokenizer operates on Unicode text but uses byte-level BPE. To make bytes
+//! representable as "characters" in the vocabulary, OpenAI maps each byte value (0-255)
+//! to a unique Unicode character. Printable ASCII and some extended Latin characters
+//! map to themselves; other bytes map to characters in the range U+0100-U+0143.
+//!
+//! # Reference
+//!
+//! - [OpenAI GPT-2 encoder.py](https://github.com/openai/gpt-2/blob/master/src/encoder.py)
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-/// Get the GPT-2 byte-to-unicode mapping
-/// This maps bytes to unicode characters for byte-level BPE
+/// Returns the GPT-2 byte-to-unicode mapping.
+///
+/// This maps each byte value (0-255) to a unique Unicode character for byte-level BPE.
+/// The mapping is computed once and cached for subsequent calls.
+///
+/// # Returns
+///
+/// A static reference to the byte-to-character mapping.
 pub fn bytes_to_unicode() -> &'static HashMap<u8, char> {
     static BYTE_ENCODER: OnceLock<HashMap<u8, char>> = OnceLock::new();
     BYTE_ENCODER.get_or_init(|| {

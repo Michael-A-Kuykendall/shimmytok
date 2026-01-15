@@ -1,4 +1,25 @@
-//! GGUF file format reader
+//! GGUF file format reader.
+//!
+//! This module provides functionality to read vocabulary and tokenizer metadata from
+//! GGUF (GPT-Generated Unified Format) model files. GGUF is the standard format used
+//! by llama.cpp and compatible inference engines.
+//!
+//! # Supported Versions
+//!
+//! - GGUF v2: Standard format
+//! - GGUF v3: Extended format (used by GPT-2 and newer models)
+//!
+//! # Security
+//!
+//! This parser includes protections against malicious files:
+//! - String allocation limits to prevent OOM attacks
+//! - Bounds checking on array sizes
+//! - Validation of file structure
+//!
+//! # Reference
+//!
+//! - [GGUF Specification](https://github.com/ggerganov/ggml/blob/master/docs/gguf.md)
+//! - [llama.cpp GGUF support](https://github.com/ggerganov/llama.cpp)
 
 use crate::{Error, TokenType};
 use std::collections::HashMap;
@@ -6,6 +27,10 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
 
+/// Metadata extracted from a GGUF file's tokenizer section.
+///
+/// Contains the vocabulary, merge rules, and configuration needed to
+/// reconstruct a tokenizer that matches the model's training.
 pub struct GGUFMetadata {
     pub tokens: Vec<String>,
     pub scores: Option<Vec<f32>>,

@@ -60,22 +60,12 @@ Your training is a HYPOTHESIS, not FACT. Before claiming anything is true:
 - `multi_replace_string_in_file` - multiple edits at once
 - `create_file` - create new files
 
-### Terminal Commands (ONLY these patterns)
-- `cargo build --release`
-- `cargo test`
-- `cargo test <test_name>`
-- `cargo test -- --nocapture`
-- `git status`
-- `git add -A && git commit -m "<message>"`
-- `git diff`
-
-### FORBIDDEN
-- ❌ NO pipes (grep, tail, head, etc.) - use grep_search tool instead
-- ❌ NO find commands - use file_search tool instead
-- ❌ NO cat/less - use read_file tool instead
-- ❌ NO complex one-liners
-- ❌ NO creative terminal commands
-- ❌ NO sed/awk - use replace_string_in_file instead
+### Terminal Commands
+Use terminal commands as needed for development tasks:
+- Build/test: `cargo build`, `cargo test`, `cargo clippy`, `cargo fmt`
+- Git: `git status`, `git diff`, `git add`, `git commit`
+- File inspection: `cat`, `ls`, `head`, `tail`, `grep`, `find`
+- Use tools for editing files, terminal for reading/inspection
 
 ### Estimation Rules
 - **ALWAYS use Fibonacci numbers** for estimates (1, 2, 3, 5, 8, 13, 21...)

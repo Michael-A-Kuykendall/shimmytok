@@ -108,11 +108,10 @@ fn clean_spaces_helper(text: &str) -> String {
             let next = chars.get(i + 1);
             let next2 = chars.get(i + 2);
 
-            let should_remove_space = match (next, next2) {
-                (Some('s'), _) | (Some('m'), _) => true,
-                (Some('v'), Some('e')) | (Some('r'), Some('e')) => true,
-                _ => false,
-            };
+            let should_remove_space = matches!(
+                (next, next2),
+                (Some('s'), _) | (Some('m'), _) | (Some('v'), Some('e')) | (Some('r'), Some('e'))
+            );
 
             if should_remove_space {
                 chars.remove(i - 1);

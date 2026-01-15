@@ -1,16 +1,27 @@
 //! PLaMo-2 tokenizer implementation.
 //!
+//! # ⚠️ Experimental
+//!
+//! **Status**: Implementation complete, but **no GGUF test models available** from llama.cpp.
+//! This module cannot be validated against the reference implementation without commodity-accessible
+//! test fixtures. Use with caution in production.
+//!
+//! # Algorithm
+//!
 //! Port of PLaMo-2 tokenizer core algorithm (table-driven matching + reverse DP + byte fallback).
 //! Reference: pfnet/plamo-2-translate-eval tokenization_plamo.py
 //!
-//! Key features:
+//! # Key Features
+//!
 //! - Table-driven suffix matching with sorted prefixes
 //! - Reverse DP scoring from end to start
 //! - Byte fallback for unknown codepoints using `<0xNN>` tokens
 //!
-//! IMPORTANT: Exact parity depends on:
+//! # Implementation Notes
+//!
+//! Exact parity depends on:
 //! - Having BYTE tokens present for all 256 bytes
-//! - Scaling scores exactly: round(score * 1e4)
+//! - Scaling scores exactly: `round(score * 1e4)`
 //! - Unknown sentinel score constants
 
 use crate::vocab::{TokenType, Vocabulary};
@@ -299,8 +310,9 @@ mod tests {
 
     #[test]
     fn test_constants() {
-        assert!(INVALID_SCORE < UNKNOWN_SCORE);
-        assert!(UNKNOWN_SCORE < 0);
+        // Verify score ordering at compile time via const assertions
+        const _: () = assert!(INVALID_SCORE < UNKNOWN_SCORE);
+        const _: () = assert!(UNKNOWN_SCORE < 0);
     }
 
     #[test]

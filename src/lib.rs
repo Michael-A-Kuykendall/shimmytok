@@ -63,6 +63,7 @@ use std::path::Path;
 pub mod bpe;
 pub mod byte_encoder;
 pub mod gguf;
+pub mod invariants;
 pub mod plamo2;
 pub mod rwkv;
 pub mod sentencepiece;
@@ -288,10 +289,15 @@ impl Tokenizer {
             model => return Err(Error::UnsupportedModel(model.to_string())),
         };
 
-        Ok(Self {
+        let tokenizer = Self {
             vocab,
             tokenizer_impl,
-        })
+        };
+
+        // Verify vocabulary consistency in debug builds
+        invariants::assert_vocabulary_consistent(&tokenizer);
+
+        Ok(tokenizer)
     }
 
     /// Encode text into a sequence of token IDs
@@ -389,6 +395,9 @@ impl Tokenizer {
             tokens.push(self.vocab.eos_token_id());
         }
 
+        // Verify postconditions in debug builds
+        invariants::assert_encode_postconditions(&tokens, self.vocab_size());
+
         Ok(tokens)
     }
 
@@ -456,6 +465,10 @@ impl Tokenizer {
         tokens: &[TokenId],
         options: &DecodeOptions,
     ) -> Result<String, Error> {
+        // NOTE: We intentionally do NOT assert preconditions here because
+        // tokens are user input that may be invalid. The code below handles
+        // invalid tokens by returning Error::InvalidToken.
+
         // Filter tokens based on options
         let filtered_tokens: Vec<TokenId> = if options.skip_special_tokens {
             tokens

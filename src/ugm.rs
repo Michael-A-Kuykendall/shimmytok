@@ -1,9 +1,18 @@
 //! UGM (Unigram) tokenizer implementation.
 //!
-//! Port of llama.cpp UGM tokenizer session (unigram / SentencePiece-style Viterbi).
-//! Source: llm_tokenizer_ugm_session::tokenize
+//! # ⚠️ Experimental
 //!
-//! Key features:
+//! **Status**: Implementation complete, but **no T5/mT5 GGUF test models available** for validation.
+//! llama.cpp T5 architecture support is limited, and test fixtures are not commodity-accessible.
+//! This module cannot be validated against the reference implementation.
+//!
+//! # Algorithm
+//!
+//! Port of llama.cpp UGM tokenizer session (unigram / SentencePiece-style Viterbi).
+//! Source: `llm_tokenizer_ugm_session::tokenize`
+//!
+//! # Key Features
+//!
 //! - Trie-based prefix matching
 //! - Viterbi-style DP for optimal tokenization
 //! - Score-based selection between competing tokenizations

@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-01-15
+
+### 🛡️ Code Quality & Testing
+
+This release focuses on code quality, documentation, and test coverage improvements.
+
+### Added
+
+- **Invariants module** (`src/invariants.rs`) - Debug-mode runtime assertions for tokenizer correctness
+- **Property-based testing** (`tests/test_proptest.rs`) - 6 proptest properties for fuzz testing
+- **Coverage tests** (`tests/test_coverage.rs`) - 37 targeted tests for edge cases
+- **Experimental warnings** - Clear documentation that PLaMo-2, RWKV, UGM modules lack commodity test fixtures
+
+### Changed
+
+- **Dual license** - Now `MIT OR Apache-2.0` with separate license files
+- **Enhanced documentation** - Improved module-level rustdoc for `byte_encoder.rs` and `gguf.rs`
+- **CODEOWNERS** moved to `.github/CODEOWNERS` (standard location)
+
+### Fixed
+
+- All clippy warnings resolved (10+ fixes)
+- `const` assertion in plamo2.rs
+- Invariant assertions no longer panic on intentionally-invalid user input in tests
+
+### Testing
+
+- Test coverage improved from ~62% to ~80%+ on core modules
+- 22 unit tests + 37 integration tests + 6 proptest properties
+- All tests pass with `cargo test`
+
 ## [0.7.0] - 2025-01-26
 
 ### 🎯 Full llama.cpp Tokenizer Parity
@@ -108,7 +139,8 @@ All tokenizers validated against `llama-tokenize` with exact token match:
 - ✅ Phi-3 (SentencePiece)
 - ✅ GPT-2 (BPE)
 
-[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.4.0...v0.6.0
 [0.4.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.3.0...v0.4.0

@@ -4,16 +4,16 @@ Thank you to all our sponsors who help keep shimmytok free forever! 🙏
 
 ## 💝 Current Sponsors
 
-### Infrastructure Partners ($500+/month)
+### Enterprise Partners ($500+/month)
 *Be the first!*
 
 ### Corporate Backers ($100+/month)
 *Be the first!*
 
-### Bug Prioritizers ($25+/month)
+### Developer Supporters ($25+/month)
 *Be the first!*
 
-### Coffee Tier ($5+/month)
+### Coffee Heroes ($5+/month)
 *Be the first!*
 
 ## Why Sponsor?
@@ -29,25 +29,25 @@ Your sponsorship helps:
 
 ## Sponsorship Tiers
 
-### ☕ Coffee Tier - $5/month
+### ☕ Coffee Heroes - $5/month
 - Eternal gratitude
 - Sponsor badge on your GitHub profile
 - Name listed in this file
 
-### 🐛 Bug Prioritizer - $25/month
-- Everything in Coffee tier
+### 🧑‍💻 Developer Supporters - $25/month
+- Everything in Coffee Heroes
 - Priority response to bug reports
 - Name + link in [SPONSORS.md](SPONSORS.md)
 - Influence on roadmap priorities
 
-### 🏢 Corporate Backer - $100/month
-- Everything in Bug Prioritizer tier
+### 🏢 Corporate Backers - $100/month
+- Everything in Developer Supporters
 - Company logo in README (small)
 - Company logo in SPONSORS.md
 - Recognition in release notes
 
-### 🚀 Infrastructure Partner - $500+/month
-- Everything in Corporate Backer tier
+### 🚀 Enterprise Partners - $500+/month
+- Everything in Corporate Backers
 - Company logo in README (prominent placement)
 - Monthly 1:1 office hours
 - Direct input on roadmap
