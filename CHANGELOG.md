@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.1] - 2026-01-15
 
-### 🛡️ Code Quality & Testing
+### Code Quality & Testing
 
 This release focuses on code quality, documentation, and test coverage improvements.
 
@@ -40,7 +40,7 @@ This release focuses on code quality, documentation, and test coverage improveme
 
 ## [0.7.0] - 2025-01-26
 
-### 🎯 Full llama.cpp Tokenizer Parity
+### Full llama.cpp Tokenizer Parity
 
 This release completes support for all tokenizer types in llama.cpp's `LLAMA_VOCAB_TYPE` enum.
 
