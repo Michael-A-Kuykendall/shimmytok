@@ -1,122 +1,156 @@
-# 🗺️ shimmytok Roadmap
+# shimmytok Roadmap
 
-**Current Version**: v0.7.0  
+**Current Version**: v0.7.1  
 **Status**: Production Ready  
-**Primary Use Case**: GGUF tokenization for libshimmy integration
+**Mission**: Pure Rust GGUF tokenizer with 100% llama.cpp compatibility
 
 ---
 
-## 🎯 Project Mission
+## What shimmytok Is
 
-shimmytok is a **pure Rust tokenizer library** for GGUF model files with 100% llama.cpp compatibility.
+A tokenizer library for Rust developers building LLM inference engines.
 
-**Design Philosophy**:
-- 🔒 **Correctness over performance** - Match llama.cpp exactly
-- 📦 **Minimal dependencies** - thiserror + regex only
-- 🦀 **Pure Rust** - No C++ bindings required
-- ✅ **Validation-driven** - Every tokenizer validated against llama.cpp
+- **Pure Rust** - No C/C++ dependencies, no FFI
+- **GGUF Native** - Loads vocab directly from model files
+- **llama.cpp Compatible** - Validated against `llama-tokenize`
+- **Embeddable** - Single dependency for Rust inference projects
+
+## What shimmytok Is NOT
+
+- A tokenizer training library
+- A Python library (use HuggingFace tokenizers)
+- A general-purpose NLP toolkit
+- A model inference engine (that's libshimmy)
 
 ---
 
-## ✅ v0.7.0 - Full llama.cpp Parity (Current)
+## Current State (v0.7.x)
 
-### Tokenizer Coverage
-| Type | Name | Status | Validated Against |
-|------|------|--------|-------------------|
-| SPM | SentencePiece | ✅ | llama-spm |
-| BPE | Byte-Pair Encoding | ✅ | gpt-2, starcoder, qwen2, deepseek-coder, deepseek-llm, falcon, command-r, refact |
-| WPM | Word-Piece Model | ✅ | bert-bge |
-| UGM | Unigram | ✅ | *(implementation complete, needs T5 GGUF)* |
-| RWKV | RWKV World | ✅ | *(implementation complete, needs model)* |
-| - | PLaMo-2 | ✅ | *(no GGUF available from llama.cpp)* |
+### Tokenizer Support
 
-### Validated Models (10/10 passing)
-All models validated against `llama-tokenize` binary with exact token match:
+| Algorithm | Models | Status |
+|-----------|--------|--------|
+| SentencePiece | Llama, Mistral, Gemma | Validated |
+| BPE | GPT-2, Qwen, StarCoder, DeepSeek | Validated |
+| WPM | BERT | Validated |
+| UGM | T5-style | Implemented, needs GGUF model |
+| RWKV | RWKV World | Implemented, needs GGUF model |
+| PLaMo-2 | PLaMo | Implemented, no GGUF exists |
 
-- ✅ `ggml-vocab-bert-bge.gguf` (WPM)
-- ✅ `ggml-vocab-command-r.gguf` (BPE)
-- ✅ `ggml-vocab-deepseek-coder.gguf` (BPE)
-- ✅ `ggml-vocab-deepseek-llm.gguf` (BPE)
-- ✅ `ggml-vocab-falcon.gguf` (BPE)
-- ✅ `ggml-vocab-gpt-2.gguf` (BPE)
-- ✅ `ggml-vocab-llama-spm.gguf` (SPM)
-- ✅ `ggml-vocab-qwen2.gguf` (BPE)
-- ✅ `ggml-vocab-refact.gguf` (BPE)
-- ✅ `ggml-vocab-starcoder.gguf` (BPE)
+### API Surface (Stable)
 
-### Public API (Stable)
 ```rust
-// Core API
+// Load
 Tokenizer::from_gguf_file(path) -> Result<Tokenizer>
-tokenizer.encode(text, add_special_tokens) -> Result<Vec<TokenId>>
-tokenizer.decode(&token_ids) -> Result<String>
-tokenizer.decode_single(token_id) -> Result<String>
+
+// Encode
+tokenizer.encode(text, add_special) -> Result<Vec<u32>>
+tokenizer.encode_batch(texts, add_special) -> Result<Vec<Vec<u32>>>
+
+// Decode  
+tokenizer.decode(tokens, skip_special) -> Result<String>
+tokenizer.decode_single(token) -> Result<String>
 
 // Metadata
 tokenizer.vocab_size() -> usize
-tokenizer.bos_token() -> Option<TokenId>
-tokenizer.eos_token() -> Option<TokenId>
+tokenizer.bos_token() -> u32
+tokenizer.eos_token() -> u32
 tokenizer.model_type() -> &str
-tokenizer.pre_type() -> &str
-
-// Batch processing
-tokenizer.encode_batch(texts, add_special) -> Result<Vec<Vec<TokenId>>>
 ```
 
 ---
 
-## 🔮 v0.8.0 - Extended Validation
+## Roadmap
 
-**Target**: Additional tokenizer validation with available models
+### v0.8.0 - Performance
 
-### Planned
-- [ ] **RWKV validation** - Test with `rwkv-4-pile-169m` GGUF when available
-- [ ] **T5/UGM validation** - Investigate llama.cpp T5 architecture support
-- [ ] **Additional BPE patterns** - Any new vocab files from llama.cpp updates
+Focus: Make it fast without breaking correctness.
 
-### Stretch Goals
-- [ ] **Phi-4 validation** - When GGUF available
-- [ ] **Llama-3.1/3.2 validation** - Verify continued compatibility
+- [ ] Benchmark suite against HuggingFace tokenizers
+- [ ] Profile hot paths (vocab lookup, BPE merge)
+- [ ] Consider SIMD for batch operations
+- [ ] Memory allocation optimization
 
----
+Success metric: Within 2x of tiktoken for BPE, within 2x of sentencepiece for SPM.
 
-## 🌟 Future Considerations
+### v0.9.0 - Production Hardening
 
-### May Implement
-- **SIMD optimization** - Performance without sacrificing correctness
-- **Streaming encoder** - Token-by-token encoding for very large texts
-- **Async file loading** - Non-blocking GGUF parsing
+Focus: Ready for untrusted input in production.
 
-### Will Not Implement
-- ❌ C++ dependencies or FFI
-- ❌ Training/fine-tuning support
-- ❌ Model inference capabilities
-- ❌ Tokenizer training from scratch
-- ❌ Non-GGUF format support (safetensors, etc.)
+- [ ] Fuzz testing with cargo-fuzz
+- [ ] Memory limit enforcement (already started)
+- [ ] Malformed GGUF handling
+- [ ] Error message improvements
 
----
+Success metric: No panics on any input, clear error messages.
 
-## 📊 Version History
+### v1.0.0 - Stable Release
 
-| Version | Date | Highlights |
-|---------|------|------------|
-| v0.7.0 | Jan 2025 | Full llama.cpp parity: WPM, UGM, RWKV, PLaMo-2 |
-| v0.6.0 | Jan 2025 | llama.cpp validation fixes |
-| v0.4.0 | Oct 2024 | Streaming decode, token introspection |
-| v0.3.0 | Oct 2024 | Mistral, Qwen, Gemma support |
-| v0.2.0 | Oct 2024 | Batch encoding, benchmarks |
-| v0.1.0 | Oct 2024 | Initial release: SPM + BPE |
+Focus: API stability commitment.
+
+- [ ] API review and freeze
+- [ ] Documentation audit
+- [ ] crates.io publish with stable guarantees
+- [ ] MSRV policy (minimum supported Rust version)
+
+Success metric: Semver commitment, no breaking changes in 1.x.
 
 ---
 
-## 🔗 Related Projects
+## Out of Scope (Will Not Implement)
 
-- **[libshimmy](https://github.com/Michael-A-Kuykendall/libshimmy)** - Pure Rust LLM inference (uses shimmytok)
-- **[llama.cpp](https://github.com/ggerganov/llama.cpp)** - Reference C++ implementation
-- **[GGUF spec](https://github.com/ggerganov/ggml/blob/master/docs/gguf.md)** - File format documentation
+These are intentionally excluded to keep shimmytok focused:
+
+| Feature | Reason | Alternative |
+|---------|--------|-------------|
+| Tokenizer training | Not our lane | SentencePiece, tokenizers |
+| Non-GGUF formats | GGUF-only scope | HuggingFace tokenizers |
+| Python bindings | Rust-first library | PyO3 wrapper by others |
+| Model inference | Tokenizer only | libshimmy |
+| Streaming encode | Complexity vs value | Chunk input yourself |
+| Async loading | Complexity vs value | spawn_blocking |
 
 ---
 
-**Maintainer**: Michael A. Kuykendall  
-**License**: MIT  
-**Last Updated**: January 2025
+## Integration
+
+shimmytok is designed for:
+
+```
+Your Rust App
+     |
+     v
+libshimmy (inference)  <-- or your own inference code
+     |
+     v
+shimmytok (tokenization)
+     |
+     v
+model.gguf (GGUF file)
+```
+
+Primary consumer: [libshimmy](https://github.com/Michael-A-Kuykendall/libshimmy)
+
+---
+
+## Version History
+
+| Version | Date | Focus |
+|---------|------|-------|
+| 0.7.1 | Jan 2026 | Code quality, test coverage |
+| 0.7.0 | Jan 2025 | Full llama.cpp parity |
+| 0.6.0 | Jan 2025 | Validation fixes |
+| 0.4.0 | Oct 2024 | Streaming decode |
+| 0.3.0 | Oct 2024 | Multi-model support |
+| 0.2.0 | Oct 2024 | Batch encoding |
+| 0.1.0 | Oct 2024 | Initial release |
+
+---
+
+## License
+
+MIT OR Apache-2.0
+
+## Maintainer
+
+Michael A. Kuykendall
