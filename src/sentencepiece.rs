@@ -180,9 +180,11 @@ impl TokenizerImpl for SentencePieceTokenizer {
         }
 
         // Process merges in priority order
-        // Add iteration limit to prevent infinite loops (Issue R2#2)
-        // Cap at 100K iterations regardless of input size to prevent DoS
-        let max_iterations = (10 * symbols.len()).min(100_000);
+        // Each merge reduces symbol count by exactly 1, so total merges <= initial symbols.len().
+        // We allow 10x headroom for priority queue re-insertions of stale entries.
+        // The hard 100K cap has been removed — it fires on large prompts (>10K tokens) even
+        // when the BPE loop is making forward progress and would terminate correctly.
+        let max_iterations = 10 * symbols.len();
         let mut iterations = 0;
         while let Some(bigram) = work_queue.pop() {
             // Check limit BEFORE doing work (Issue R3#3)
