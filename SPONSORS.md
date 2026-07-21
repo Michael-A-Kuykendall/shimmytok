@@ -1,52 +1,54 @@
 # Sponsors
 
-Thank you to all our sponsors who help keep shimmytok free forever! 🙏
+Thank you to all our sponsors who help keep shimmytok free forever!
 
-## 💝 Current Sponsors
+## Current Sponsors
 
 ### Enterprise Partners ($500+/month)
 *Be the first!*
 
 ### Corporate Backers ($100+/month)
-*Be the first!*
+
+[![ZephyrCloudIO](https://github.com/ZephyrCloudIO.png?size=80)](https://github.com/ZephyrCloudIO)
+
+**[ZephyrCloudIO](https://github.com/ZephyrCloudIO)** - Corporate Backer (joined December 25th, 2025)
 
 ### Developer Supporters ($25+/month)
 *Be the first!*
 
 ### Coffee Heroes ($5+/month)
-*Be the first!*
+- alistairheath
 
 ## Why Sponsor?
 
 **shimmytok is free forever.** No paid tiers, no enterprise upsells, no bait-and-switch.
 
 Your sponsorship helps:
-- 🛠️ **Maintain compatibility** with new llama.cpp releases
-- 🐛 **Fix bugs faster** with dedicated support
-- 📚 **Improve documentation** and examples
-- ✨ **Add new features** (more tokenizer types, optimizations)
-- 🧪 **Expand test coverage** across more models
+- Fix bugs faster with dedicated support
+- Improve documentation and examples
+- Add new features
+- Expand test coverage across more platforms
 
 ## Sponsorship Tiers
 
-### ☕ Coffee Heroes - $5/month
+### Coffee Heroes - $5/month
 - Eternal gratitude
 - Sponsor badge on your GitHub profile
 - Name listed in this file
 
-### 🧑‍💻 Developer Supporters - $25/month
+### Developer Supporters - $25/month
 - Everything in Coffee Heroes
 - Priority response to bug reports
-- Name + link in [SPONSORS.md](SPONSORS.md)
+- Name + link in SPONSORS.md
 - Influence on roadmap priorities
 
-### 🏢 Corporate Backers - $100/month
+### Corporate Backers - $100/month
 - Everything in Developer Supporters
 - Company logo in README (small)
 - Company logo in SPONSORS.md
 - Recognition in release notes
 
-### 🚀 Enterprise Partners - $500+/month
+### Enterprise Partners - $500+/month
 - Everything in Corporate Backers
 - Company logo in README (prominent placement)
 - Monthly 1:1 office hours
@@ -56,28 +58,10 @@ Your sponsorship helps:
 
 ## How to Sponsor
 
-[**🎯 Become a Sponsor on GitHub**](https://github.com/sponsors/Michael-A-Kuykendall)
+[Become a Sponsor on GitHub](https://github.com/sponsors/Michael-A-Kuykendall)
 
 All sponsorship goes directly to maintaining shimmytok and keeping it free forever.
 
 ## Corporate Sponsorship
 
 For invoiced sponsorship or custom arrangements, email: michaelallenkuykendall@gmail.com
-
-## Alternative Ways to Support
-
-Can't sponsor financially? You can still help:
-
-- ⭐ **Star the repo** on GitHub
-- 🐛 **Report bugs** with reproduction steps
-- 📢 **Share shimmytok** with others building Rust LLM apps
-- 📝 **Write blog posts** about using shimmytok
-- 💬 **Answer questions** in GitHub Discussions
-
-## Thank You
-
-Every sponsorship, no matter the size, makes a huge difference. Thank you for believing in free, open-source infrastructure.
-
----
-
-*Want to be listed here? [Sponsor shimmytok today!](https://github.com/sponsors/Michael-A-Kuykendall)*
