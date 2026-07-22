@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-07-22
+
+### Fixed
+
+- **Llama-3 / llama-bpe BPE parity** — Added `tokenizer_ignore_merges` optimization:
+  when `pre_type` is `llama3`, `llama-v3`, or `llama-bpe`, entire pre-tokenized
+  fragments that exist as single vocabulary tokens are emitted directly without running
+  BPE merge rules. Matches llama.cpp's behavior exactly. Fixes token sequences like
+  `" {"` → `[314]` (was `[220, 90]`) on Llama-3.2-1B.
+- **`"llama-bpe"` pre_type now maps to the llama3 regex pattern** — previously fell
+  through to the 4-pattern default, causing incorrect fragment splits on Llama-3.2.
+- **GPT-2 family pre-tokenization pattern corrected** — removed spurious trailing
+  `|\s+` catch-all that llama.cpp does not have. Fixes multi-space handling on phi-2
+  and all `gpt-2`-family models.
+
+### Added
+
+- **`Tokenizer::from_reader(impl Read)`** — load a tokenizer from any `Read` source
+  (file, network stream, embedded bytes).
+- **`Tokenizer::from_bytes(&[u8])`** — convenience wrapper over `from_reader`; enables
+  WASM and embedded use cases without touching the filesystem.
+- **`Tokenizer::chat_template() -> Option<&str>`** — exposes the raw Jinja2 chat
+  template string from GGUF metadata for downstream rendering (e.g. with shimmyjinja).
+- **`docs/API_STABILITY.md`** — explicit compatibility contract documenting which API
+  surface airframe and other consumers depend on, and the rules for safe upgrades.
+- **Real-model validation tests** (`tests/test_real_models.rs`) — 8 tests against 5
+  local GGUF models validated token-for-token against `llama-tokenize`.
+
+### Changed
+
+- **`SpecialTokenIds` and `TokenizationFlags` structs** in `gguf.rs` — the 12 flat
+  `Option<u32>` fields in `GGUFMetadata` are now grouped into nested structs, eliminating
+  the `similar_names` clippy warning structurally and making the data layout self-documenting.
+- **BPE merge-rank map built once per encode** instead of once per fragment.
+- **Dead `Bigram.text` field removed** — was allocated on every merge candidate but never
+  read after construction.
+- **`impl_tokenizer_wrapper!` macro** replaces four identical wrapper structs (~60 lines).
+- **`decode_with_options` no longer clones the token slice** when `skip_special = false`.
+- **`Error` is now `#[non_exhaustive]`**, `TokenType` gets `#[repr(i32)]`.
+- **Full `cargo clippy --lib -D warnings` pass** — zero warnings.
+
+### Removed
+
+- **`examples/debug_gguf.rs`**, **`examples/test_regex.rs`** — internal scratch files.
+- **`tests/test_debug.rs`**, **`tests/test_detailed.rs`**, **`tests/test_merge_debug.rs`**
+  — hardcoded aistatepilot model paths; never ran in CI.
+
 ## [0.7.2] - 2026-07-21
 
 ### Changed
@@ -178,7 +225,8 @@ Initial release.
 - Comprehensive error handling via `thiserror`.
 - 30 tests with 100 % llama.cpp match on LLaMA, Llama-2, Llama-3, Phi-3, GPT-2.
 
-[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.6.0...v0.7.0
