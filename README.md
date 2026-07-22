@@ -60,14 +60,14 @@ Stability-guaranteed API:
   input index, identical across both backends.
 - ✅ **`get_token`** — exact-match single-token lookup, like candle's
   `TokenOutputStream`.
-- ✅ **Full llama.cpp tokenizer parity** — SPM, BPE, WPM, UGM, RWKV, PLaMo-2;
-  41 BPE pre-tokenization patterns; validated token-for-token against `llama-tokenize`.
+- ✅ **llama.cpp tokenizer support** — SPM, BPE, WPM validated token-for-token;
+  UGM, RWKV, PLaMo-2 experimental; 41 BPE pre-tokenization patterns.
 
 ## Features
 
 - 🦀 **Pure Rust** — No C++ dependencies, compiles anywhere
 - 📦 **Load from GGUF** — Tokenizer embedded in model file
-- ✅ **Validated** — Every algorithm tested against llama.cpp
+- ✅ **Validated** — SPM, BPE, and WPM tested token-for-token against llama.cpp; UGM/RWKV/PLaMo-2 are ⚠️ experimental
  - ⚡ **Fast** — Batch encoding with optional Rayon parallelism for large workloads
 - 🌊 **Streaming** — Token-by-token decoding for LLM output
 - 🔒 **Safe** — Zero unsafe code in critical paths
@@ -165,10 +165,10 @@ let piece = tokenizer.decode_single(token_id, false)?;
 
 ```rust
 tokenizer.vocab_size()    // → usize
-tokenizer.bos_token()     // → Option<TokenId>  
-tokenizer.eos_token()     // → Option<TokenId>
+tokenizer.bos_token()     // → TokenId
+tokenizer.eos_token()     // → TokenId
 tokenizer.model_type()    // → &str ("llama", "gpt2", etc.)
-tokenizer.pre_type()      // → &str (pre-tokenization pattern)
+tokenizer.pre_type()      // → Option<&str> (pre-tokenization pattern)
 ```
 
 ### Batch & Advanced
@@ -177,10 +177,13 @@ tokenizer.pre_type()      // → &str (pre-tokenization pattern)
 // Batch encoding — always available; large native batches run in parallel
 let batch = tokenizer.encode_batch(&["text1", "text2"], true)?;
 
+// Exact-match single-token lookup (like candle's TokenOutputStream)
+let maybe_id = tokenizer.get_token("<|endoftext|>");  // → Option<TokenId>
+
 // Token introspection
-tokenizer.token_to_piece(token_id)?  // → Vec<u8>
-tokenizer.token_type(token_id)       // → Option<TokenType>
-tokenizer.is_special_token(token_id) // → bool
+tokenizer.token_to_piece(token_id)?    // → Result<String, Error>
+tokenizer.token_type(token_id)         // → TokenType
+tokenizer.is_special_token(token_id)   // → bool
 ```
 
 ## Use Cases
