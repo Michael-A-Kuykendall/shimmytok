@@ -22,14 +22,14 @@
 
 🚀 **If shimmytok helps you, consider [sponsoring](https://github.com/sponsors/Michael-A-Kuykendall) — 100% of support goes to keeping it free forever.**
 
-- **$5/month**: Coffee Hero ☕ — Eternal gratitude + name in [SPONSORS.md](SPONSORS.md)
-- **$25/month**: Developer Supporter 🐛 — Priority bug response + roadmap influence
-- **$100/month**: Corporate Backer 🏢 — Logo in README + release-note recognition
-- **$500/month**: Enterprise Partner 🚀 — Prominent logo + monthly office hours + roadmap input
+- **$5/month**: Coffee tier ☕ — Eternal gratitude + sponsor badge
+- **$25/month**: Bug prioritizer 🐛 — Priority support + name in [SPONSORS.md](SPONSORS.md)
+- **$100/month**: Corporate backer 🏢 — Logo placement + monthly office hours
+- **$500/month**: Infrastructure partner 🚀 — Direct support + roadmap input
 
 [**🎯 Become a Sponsor**](https://github.com/sponsors/Michael-A-Kuykendall) | See our amazing [sponsors](SPONSORS.md) 🙏
 
-**Thank you to our sponsors:** [ZephyrCloudIO](https://github.com/ZephyrCloudIO) (Corporate Backer) · alistairheath (Coffee Hero)
+**Thank you to our sponsors:** [ZephyrCloudIO](https://github.com/ZephyrCloudIO) (Corporate backer) · [gqf2008](https://github.com/gqf2008) (Coffee tier) · alistairheath (Coffee tier)
 
 ---
 
@@ -46,14 +46,22 @@ When you download a GGUF model, the tokenizer is embedded inside. Most Rust proj
 
 **shimmytok extracts and runs the tokenizer directly from your GGUF file**, producing identical output to llama.cpp.
 
-## 🎯 v0.7.0 Highlights
+## 🎯 v0.8.0 Highlights
 
-This release achieves **full llama.cpp tokenizer parity**:
+This release makes the batch engine **portable and deterministic** without breaking any
+Stability-guaranteed API:
 
-- ✅ **6 tokenizer algorithms** — SPM, BPE, WPM, UGM, RWKV, PLaMo-2
-- ✅ **41 BPE pre-tokenization patterns** — GPT-2, Llama-3, Qwen, DeepSeek, and more
-- ✅ **10/10 vocab models validated** — Exact token match against `llama-tokenize`
-- ✅ **~4,000 lines of Rust** — Focused, auditable, no bloat
+- ✅ **Optional Rayon** — `parallel` feature (default on) makes Rayon an optional
+  dependency; `--no-default-features` and WASM/WASI build with a sequential
+  backend and **identical, deterministic results**.
+- ✅ **Immutable, lock-free BPE** — regexes and merge ranks prepared once at
+  construction; no per-encode `Mutex`.
+- ✅ **Deterministic batch errors** — `encode_batch` returns the lowest failing
+  input index, identical across both backends.
+- ✅ **`get_token`** — exact-match single-token lookup, like candle's
+  `TokenOutputStream`.
+- ✅ **Full llama.cpp tokenizer parity** — SPM, BPE, WPM, UGM, RWKV, PLaMo-2;
+  41 BPE pre-tokenization patterns; validated token-for-token against `llama-tokenize`.
 
 ## Features
 
@@ -68,7 +76,7 @@ This release achieves **full llama.cpp tokenizer parity**:
 
 ```toml
 [dependencies]
-shimmytok = "0.7"
+shimmytok = "0.8"
 ```
 
 ## Quick Start
@@ -211,7 +219,7 @@ For most use cases, tokenization is not the bottleneck — inference is.
 
 ## License
 
-MIT License — free forever, no strings attached.
+Dual-licensed **MIT OR Apache-2.0** — free forever, no strings attached.
 
 ---
 

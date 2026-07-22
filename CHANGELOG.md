@@ -229,6 +229,17 @@ All tokenizers produce exact token match against `llama-tokenize`:
 - `deepseek-llm` regex pattern simplified for Rust `fancy-regex` compatibility.
 - UGM `user_defined_trie` now correctly preprocesses text before Viterbi DP.
 
+## [0.5.0] - 2024-10-22
+
+### Added
+
+- **Full BPE pre-tokenization coverage** — added all 34 BPE pre-tokenization
+  regex patterns from llama.cpp (GPT-2, Llama-3, Qwen, DeepSeek, StarCoder,
+  Falcon, Command-R, DBRX, and more).
+- **Corrected BPE pre-tokenization order** — fixed the order in which
+  pre-tokenization patterns are applied so fragment splitting matches llama.cpp
+  exactly.
+
 ## [0.6.0] - 2025-01-20
 
 ### Fixed
@@ -280,13 +291,14 @@ Initial release.
 - Comprehensive error handling via `thiserror`.
 - 30 tests with 100 % llama.cpp match on LLaMA, Llama-2, Llama-3, Phi-3, GPT-2.
 
-[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.4...HEAD
+[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.4...v0.8.0
 [0.7.4]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.2...v0.7.3
-[0.7.2]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.1...v0.7.2
+[0.7.2]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.1...v0.7.3
 [0.7.1]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.0...v0.7.1
-[0.7.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.6.0...v0.7.0
-[0.6.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.4.0...v0.6.0
+[0.7.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.6.0-baseline...v0.7.0
+[0.6.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.4.0...v0.6.0-baseline
 [0.4.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.1.0...v0.2.0

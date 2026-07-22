@@ -7,8 +7,8 @@ receive fixes only for critical issues.
 
 | Version | Supported |
 |---------|-----------|
-| 0.7.x   | ✅ Active  |
-| < 0.7   | ❌ EOL    |
+| 0.8.x   | ✅ Active  |
+| < 0.8   | ❌ EOL    |
 
 ## Reporting a Vulnerability
 

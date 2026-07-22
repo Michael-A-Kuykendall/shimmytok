@@ -4,19 +4,19 @@ Thank you to all our sponsors who help keep shimmytok free forever!
 
 ## Current Sponsors
 
-### Enterprise Partners ($500+/month)
+### Infrastructure partner ($500+/month)
 *Be the first!*
 
-### Corporate Backers ($100+/month)
+### Corporate backer ($100+/month)
 
 [![ZephyrCloudIO](https://github.com/ZephyrCloudIO.png?size=80)](https://github.com/ZephyrCloudIO)
 
-**[ZephyrCloudIO](https://github.com/ZephyrCloudIO)** - Corporate Backer (joined December 25th, 2025)
+**[ZephyrCloudIO](https://github.com/ZephyrCloudIO)** - Corporate backer (joined December 25th, 2025)
 
-### Developer Supporters ($25+/month)
+### Bug prioritizer ($25+/month)
 *Be the first!*
 
-### Coffee Heroes ($5+/month)
+### Coffee tier ($5+/month)
 - **[gqf2008](https://github.com/gqf2008)** (高庆丰)
 - alistairheath
 
@@ -32,25 +32,25 @@ Your sponsorship helps:
 
 ## Sponsorship Tiers
 
-### Coffee Heroes - $5/month
+### Coffee tier - $5/month
 - Eternal gratitude
 - Sponsor badge on your GitHub profile
 - Name listed in this file
 
-### Developer Supporters - $25/month
-- Everything in Coffee Heroes
+### Bug prioritizer - $25/month
+- Everything in Coffee tier
 - Priority response to bug reports
 - Name + link in SPONSORS.md
 - Influence on roadmap priorities
 
-### Corporate Backers - $100/month
-- Everything in Developer Supporters
+### Corporate backer - $100/month
+- Everything in Bug prioritizer
 - Company logo in README (small)
 - Company logo in SPONSORS.md
 - Recognition in release notes
 
-### Enterprise Partners - $500+/month
-- Everything in Corporate Backers
+### Infrastructure partner - $500+/month
+- Everything in Corporate backer
 - Company logo in README (prominent placement)
 - Monthly 1:1 office hours
 - Direct input on roadmap
