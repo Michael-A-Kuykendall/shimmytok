@@ -487,7 +487,7 @@ fn test_round_trip_unicode() {
         "مرحبا",
         "שלום",
         "🎉🚀✨",
-        "a̐éö̲",  // Combining marks
+        "a̐éö̲",    // Combining marks
         "\t\n\r", // Whitespace
     ];
 
@@ -591,7 +591,7 @@ fn test_decode_skip_special_tokens() {
 
     // Decode with skip_special_tokens=true
     let decoded = tokenizer.decode(&tokens, true).unwrap();
-    
+
     // Should not contain BOS/EOS markers
     assert!(!decoded.contains("<|begin_of_text|>"));
     assert!(!decoded.contains("<|end_of_text|>"));
@@ -607,12 +607,14 @@ fn test_batch_encode_large() {
     let tokenizer = Tokenizer::from_gguf_file(&model_path).expect("Failed to load model");
 
     // Test batch encoding with multiple strings
-    let texts: Vec<&str> = (0..10).map(|i| match i % 4 {
-        0 => "Hello world",
-        1 => "The quick brown fox",
-        2 => "1234567890",
-        _ => "Special chars: @#$%",
-    }).collect();
+    let texts: Vec<&str> = (0..10)
+        .map(|i| match i % 4 {
+            0 => "Hello world",
+            1 => "The quick brown fox",
+            2 => "1234567890",
+            _ => "Special chars: @#$%",
+        })
+        .collect();
 
     let results = tokenizer.encode_batch(&texts, false).unwrap();
     assert_eq!(results.len(), 10);
@@ -828,4 +830,3 @@ fn test_gguf_unsupported_version() {
         Ok(_) => panic!("Expected error"),
     }
 }
-

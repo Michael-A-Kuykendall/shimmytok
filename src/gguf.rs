@@ -218,7 +218,7 @@ pub fn load_metadata_from_reader<R: Read>(mut reader: R) -> Result<GGUFMetadata,
         eot: kv_u32!(kv_pairs, "tokenizer.ggml.eot_token_id"),
         eog: kv_u32!(kv_pairs, "tokenizer.ggml.eog_token_id"),
         sep: kv_u32!(kv_pairs, "tokenizer.ggml.sep_token_id"),
-        nl:  kv_u32!(kv_pairs, "tokenizer.ggml.nl_token_id"),
+        nl: kv_u32!(kv_pairs, "tokenizer.ggml.nl_token_id"),
         fim_pre: kv_u32!(kv_pairs, "tokenizer.ggml.fim_pre_token_id"),
         fim_suf: kv_u32!(kv_pairs, "tokenizer.ggml.fim_suf_token_id"),
         fim_mid: kv_u32!(kv_pairs, "tokenizer.ggml.fim_mid_token_id"),
@@ -227,14 +227,10 @@ pub fn load_metadata_from_reader<R: Read>(mut reader: R) -> Result<GGUFMetadata,
 
     // Tokenization flags — fall back to llama.cpp defaults when absent
     let flags = TokenizationFlags {
-        add_bos_token: kv_bool!(kv_pairs, "tokenizer.ggml.add_bos_token")
-            .unwrap_or(true),
-        add_eos_token: kv_bool!(kv_pairs, "tokenizer.ggml.add_eos_token")
-            .unwrap_or(false),
-        add_space_prefix: kv_bool!(kv_pairs, "tokenizer.ggml.add_space_prefix")
-            .unwrap_or(true),
-        clean_spaces: kv_bool!(kv_pairs, "tokenizer.ggml.clean_spaces")
-            .unwrap_or(false),
+        add_bos_token: kv_bool!(kv_pairs, "tokenizer.ggml.add_bos_token").unwrap_or(true),
+        add_eos_token: kv_bool!(kv_pairs, "tokenizer.ggml.add_eos_token").unwrap_or(false),
+        add_space_prefix: kv_bool!(kv_pairs, "tokenizer.ggml.add_space_prefix").unwrap_or(true),
+        clean_spaces: kv_bool!(kv_pairs, "tokenizer.ggml.clean_spaces").unwrap_or(false),
         remove_extra_whitespaces: kv_bool!(kv_pairs, "tokenizer.ggml.remove_extra_whitespaces")
             .unwrap_or(false),
         escape_whitespaces: kv_bool!(kv_pairs, "tokenizer.ggml.escape_whitespaces")

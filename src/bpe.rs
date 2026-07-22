@@ -346,7 +346,6 @@ impl BPETokenizer {
         vocab: &Vocabulary,
         merge_ranks: &HashMap<(String, String), usize>,
     ) -> Result<Vec<TokenId>, crate::Error> {
-
         // Split into UTF-8 characters as initial symbols
         let char_indices: Vec<(usize, char)> = text.char_indices().collect();
         let mut symbols: Vec<Symbol> = Vec::with_capacity(char_indices.len());
@@ -418,24 +417,10 @@ impl BPETokenizer {
 
                     // Add new potential merges with neighbors
                     if let Some(prev) = symbols[left].prev {
-                        try_add_bigram(
-                            prev,
-                            left,
-                            text,
-                            &symbols,
-                            merge_ranks,
-                            &mut work_queue,
-                        );
+                        try_add_bigram(prev, left, text, &symbols, merge_ranks, &mut work_queue);
                     }
                     if let Some(next) = symbols[left].next {
-                        try_add_bigram(
-                            left,
-                            next,
-                            text,
-                            &symbols,
-                            merge_ranks,
-                            &mut work_queue,
-                        );
+                        try_add_bigram(left, next, text, &symbols, merge_ranks, &mut work_queue);
                     }
                 }
             }

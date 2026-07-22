@@ -20,7 +20,8 @@ const LLAMA_TOKENIZE: &str = "C:/llama.cpp/build/bin/Release/llama-tokenize.exe"
 const MODEL_TINYLLAMA: &str = "D:/shimmy-test-models/gguf_collection/TinyLlama/TinyLlama-1.1B-Chat-v1.0/TinyLlama-1.1B-Chat-v1.0.Q4_0.gguf";
 const MODEL_LLAMA32_1B: &str = "D:/shimmy-test-models/gguf_collection/meta-llama/Llama-3.2-1B-Instruct/Llama-3.2-1B-Instruct-Q4_K_M.gguf";
 const MODEL_QWEN2_05B: &str = "D:/shimmy-test-models/gguf_collection/Qwen/Qwen2-0.5B-Instruct/qwen2-0_5b-instruct-q4_k_m.gguf";
-const MODEL_GEMMA2_2B: &str = "D:/shimmy-test-models/gguf_collection/google/gemma-2-2b-it/gemma-2-2b-it-Q4_K_M.gguf";
+const MODEL_GEMMA2_2B: &str =
+    "D:/shimmy-test-models/gguf_collection/google/gemma-2-2b-it/gemma-2-2b-it-Q4_K_M.gguf";
 const MODEL_PHI2: &str = "D:/shimmy-test-models/gguf_collection/microsoft/phi-2/phi-2.Q4_K_M.gguf";
 
 /// Standard test corpus — covers ASCII, Unicode, code, punctuation, CJK.
@@ -56,9 +57,7 @@ const KNOWN_GAPS: &[&str] = &[
 /// Run llama-tokenize and return the token IDs it produces.
 /// Returns `None` if the binary or model file is unavailable.
 fn llama_tokens(model: &str, text: &str) -> Option<Vec<u32>> {
-    if !std::path::Path::new(LLAMA_TOKENIZE).exists()
-        || !std::path::Path::new(model).exists()
-    {
+    if !std::path::Path::new(LLAMA_TOKENIZE).exists() || !std::path::Path::new(model).exists() {
         return None;
     }
 
@@ -96,8 +95,7 @@ fn validate_model(label: &str, model_path: &str) {
         "model not found at {model_path}"
     );
 
-    let tokenizer =
-        Tokenizer::from_gguf_file(model_path).expect("shimmytok failed to load model");
+    let tokenizer = Tokenizer::from_gguf_file(model_path).expect("shimmytok failed to load model");
 
     let mut pass = 0usize;
     let mut fail = 0usize;
@@ -126,7 +124,10 @@ fn validate_model(label: &str, model_path: &str) {
         }
     }
 
-    println!("\n{label}: {pass} passed, {fail} failed / {} total", CORPUS.len());
+    println!(
+        "\n{label}: {pass} passed, {fail} failed / {} total",
+        CORPUS.len()
+    );
     assert_eq!(fail, 0, "{fail} token mismatches against llama-tokenize");
 }
 
@@ -227,8 +228,8 @@ fn smoke_chat_template_present_on_instruction_models() {
             continue;
         }
 
-        let tok = Tokenizer::from_gguf_file(path)
-            .unwrap_or_else(|e| panic!("{name} load failed: {e}"));
+        let tok =
+            Tokenizer::from_gguf_file(path).unwrap_or_else(|e| panic!("{name} load failed: {e}"));
 
         match tok.chat_template() {
             Some(tmpl) => println!(
@@ -264,5 +265,8 @@ fn smoke_from_bytes_matches_from_file() {
     let tokens_bytes = from_bytes.encode("Hello world", false).unwrap();
     assert_eq!(tokens_file, tokens_bytes);
 
-    println!("from_bytes parity confirmed on TinyLlama ({} MB)", bytes.len() / 1_000_000);
+    println!(
+        "from_bytes parity confirmed on TinyLlama ({} MB)",
+        bytes.len() / 1_000_000
+    );
 }

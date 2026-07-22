@@ -30,13 +30,13 @@ use std::path::Path;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum TokenType {
-    Undefined   = 0,
-    Normal      = 1,
-    Unknown     = 2,
-    Control     = 3,
+    Undefined = 0,
+    Normal = 1,
+    Unknown = 2,
+    Control = 3,
     UserDefined = 4,
-    Unused      = 5,
-    Byte        = 6,
+    Unused = 5,
+    Byte = 6,
 }
 
 impl From<i32> for TokenType {
@@ -115,7 +115,6 @@ impl Vocabulary {
     }
 
     fn from_metadata(metadata: crate::gguf::GGUFMetadata) -> Result<Self, Error> {
-
         const MAX_VOCAB_SIZE: usize = 1_000_000; // 1M tokens max
         const MAX_TOKEN_LENGTH: usize = 1024; // 1KB per token max
 
@@ -224,18 +223,18 @@ impl Vocabulary {
             eot_token_id: metadata.special.eot,
             eog_token_id: metadata.special.eog,
             sep_token_id: metadata.special.sep,
-            nl_token_id:  metadata.special.nl,
+            nl_token_id: metadata.special.nl,
             fim_pre_token_id: metadata.special.fim_pre,
             fim_suf_token_id: metadata.special.fim_suf,
             fim_mid_token_id: metadata.special.fim_mid,
             mask_token_id: metadata.special.mask,
 
-            add_bos_token:             metadata.flags.add_bos_token,
-            add_eos_token:             metadata.flags.add_eos_token,
-            add_space_prefix:          metadata.flags.add_space_prefix,
-            clean_spaces:              metadata.flags.clean_spaces,
-            remove_extra_whitespaces:  metadata.flags.remove_extra_whitespaces,
-            escape_whitespaces:        metadata.flags.escape_whitespaces,
+            add_bos_token: metadata.flags.add_bos_token,
+            add_eos_token: metadata.flags.add_eos_token,
+            add_space_prefix: metadata.flags.add_space_prefix,
+            clean_spaces: metadata.flags.clean_spaces,
+            remove_extra_whitespaces: metadata.flags.remove_extra_whitespaces,
+            escape_whitespaces: metadata.flags.escape_whitespaces,
             treat_whitespace_as_suffix: metadata.flags.treat_whitespace_as_suffix,
 
             merges: metadata.merges.unwrap_or_default(),

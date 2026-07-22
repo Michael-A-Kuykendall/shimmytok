@@ -301,12 +301,9 @@ impl Tokenizer {
     /// Shared construction logic — builds a `Tokenizer` from an already-loaded
     /// `Vocabulary`. All public constructors funnel through here.
     fn from_vocab(vocab: Vocabulary) -> Result<Self, Error> {
-
         let tokenizer_impl: Box<dyn TokenizerImpl> = match vocab.model_type() {
             // SentencePiece models
-            "llama" | "mistral" | "gemma" => {
-                Box::new(sentencepiece::SentencePieceTokenizer::new())
-            }
+            "llama" | "mistral" | "gemma" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
             // BPE models
             "gpt2" | "qwen" | "qwen2" => Box::new(bpe::BPETokenizer::new()),
             // WPM (WordPiece) models — BERT-style
@@ -937,7 +934,7 @@ fn apply_clean_spaces(text: &str) -> String {
     while i + 1 < chars.len() {
         if chars[i] == '\'' && chars[i - 1] == ' ' && chars[i + 1] == ' ' {
             chars.remove(i - 1); // remove leading space
-            chars.remove(i);     // remove trailing space (now at index i)
+            chars.remove(i); // remove trailing space (now at index i)
         } else {
             i += 1;
         }
