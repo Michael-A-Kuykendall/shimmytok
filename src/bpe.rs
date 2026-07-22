@@ -69,24 +69,74 @@ impl PartialOrd for Bigram {
     }
 }
 
-pub struct BPETokenizer {
-    // Lazily compiled regex patterns (using fancy-regex for lookahead support)
-    // Maps pre-type to vector of compiled patterns (applied sequentially)
-    regex_cache: std::sync::Mutex<HashMap<String, Vec<fancy_regex::Regex>>>,
+/// Immutable, model-specific BPE state prepared once at construction and reused
+/// by every `encode` call.
+///
+/// Moving this work out of the hot path removes the per-call mutex lock, regex
+/// clone, and `String`-keyed merge-rank rebuild that the previous implementation
+/// performed on every encode.
+struct BPEPreparedState {
+    /// Pre-tokenization regexes for this model, compiled once and applied
+    /// sequentially. No mutex, no per-call clone.
+    regexes: Vec<fancy_regex::Regex>,
+    /// Merge priorities keyed by `(left_token_id, right_token_id)`. Built once
+    /// from the vocabulary; lookups need no `String` allocation.
+    merge_ranks: HashMap<(TokenId, TokenId), usize>,
+    /// llama3 `ignore_merges` optimization flag, derived from the pre-type.
+    ignore_merges: bool,
 }
 
-impl Default for BPETokenizer {
-    fn default() -> Self {
-        BPETokenizer {
-            regex_cache: std::sync::Mutex::new(HashMap::new()),
-        }
-    }
+pub struct BPETokenizer {
+    prepared: BPEPreparedState,
 }
 
 impl BPETokenizer {
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
+    /// Build a BPE tokenizer with all model-specific state prepared up front.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::TokenizationFailed`] if a pre-tokenization regex
+    /// for the model's pre-type fails to compile.
+    pub fn new(vocab: &Vocabulary) -> Result<Self, crate::Error> {
+        let pre_type = vocab.pre_type().unwrap_or("default");
+
+        // Compile the pre-tokenization regexes once.
+        let patterns = Self::get_patterns(pre_type);
+        let mut regexes = Vec::with_capacity(patterns.len());
+        for pattern in patterns {
+            let regex = fancy_regex::Regex::new(pattern).map_err(|e| {
+                crate::Error::TokenizationFailed(format!(
+                    "Failed to compile regex for '{pre_type}': {e}"
+                ))
+            })?;
+            regexes.push(regex);
+        }
+
+        // Build merge ranks keyed by token IDs. The vocabulary validates at load
+        // time that every merge rule references known tokens, so `get_token_id`
+        // is expected to succeed; unknown pairs are skipped defensively.
+        let merge_ranks: HashMap<(TokenId, TokenId), usize> = vocab
+            .get_merges()
+            .iter()
+            .enumerate()
+            .filter_map(
+                |(rank, (l, r))| match (vocab.get_token_id(l), vocab.get_token_id(r)) {
+                    (Some(lid), Some(rid)) => Some(((lid, rid), rank)),
+                    _ => None,
+                },
+            )
+            .collect();
+
+        let ignore_merges = matches!(vocab.pre_type(), Some(p) if
+            matches!(p, "llama3" | "llama-v3" | "llama-bpe"));
+
+        Ok(Self {
+            prepared: BPEPreparedState {
+                regexes,
+                merge_ranks,
+                ignore_merges,
+            },
+        })
     }
 
     /// Get pre-tokenization regex patterns for a given model type.
@@ -212,29 +262,6 @@ impl BPETokenizer {
         }
     }
 
-    /// Get or compile the pre-tokenization regex patterns
-    fn get_regexes(&self, pre_type: &str) -> Result<Vec<fancy_regex::Regex>, String> {
-        let mut cache = self
-            .regex_cache
-            .lock()
-            .map_err(|e| format!("Mutex lock failed: {e}"))?;
-
-        if let Some(regexes) = cache.get(pre_type) {
-            return Ok(regexes.clone());
-        }
-
-        let patterns = Self::get_patterns(pre_type);
-        let mut regexes = Vec::new();
-        for pattern in patterns {
-            let regex = fancy_regex::Regex::new(pattern)
-                .map_err(|e| format!("Failed to compile regex for '{pre_type}': {e}"))?;
-            regexes.push(regex);
-        }
-
-        cache.insert(pre_type.to_string(), regexes.clone());
-        Ok(regexes)
-    }
-
     /// Pre-tokenize text into fragments using sequential regex pattern matching.
     ///
     /// # Algorithm
@@ -256,17 +283,16 @@ impl BPETokenizer {
     ///
     /// # Reference
     /// llama.cpp `unicode.cpp` lines 531-563 (`unicode_regex_split_stl`)
-    fn pre_tokenize(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<String>, String> {
-        let pre_type = vocab.pre_type().unwrap_or("default");
-        let regexes = self.get_regexes(pre_type)?;
+    fn pre_tokenize(&self, text: &str) -> Vec<String> {
+        let regexes = &self.prepared.regexes;
 
         if regexes.len() == 1 {
             // Fast path for single-pattern models (most common)
-            return Ok(regexes[0]
+            return regexes[0]
                 .find_iter(text)
                 .filter_map(std::result::Result::ok)
                 .map(|m| m.as_str().to_string())
-                .collect());
+                .collect();
         }
 
         // For multiple patterns, use offset-based approach like llama.cpp
@@ -314,10 +340,10 @@ impl BPETokenizer {
         }
 
         // Convert offsets to strings
-        Ok(offsets
+        offsets
             .iter()
             .map(|(start, end)| text[*start..*end].to_string())
-            .collect())
+            .collect()
     }
 
     /// Apply Byte Pair Encoding merge algorithm to a single text fragment.
@@ -340,12 +366,8 @@ impl BPETokenizer {
     ///
     /// # Reference
     /// Direct port of llama.cpp `llm_tokenizer_bpe_session::tokenize` (lines 1040-1118)
-    fn bpe_fragment(
-        &self,
-        text: &str,
-        vocab: &Vocabulary,
-        merge_ranks: &HashMap<(String, String), usize>,
-    ) -> Result<Vec<TokenId>, crate::Error> {
+    fn bpe_fragment(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
+        let merge_ranks = &self.prepared.merge_ranks;
         // Split into UTF-8 characters as initial symbols
         let char_indices: Vec<(usize, char)> = text.char_indices().collect();
         let mut symbols: Vec<Symbol> = Vec::with_capacity(char_indices.len());
@@ -377,7 +399,7 @@ impl BPETokenizer {
         let mut work_queue = BinaryHeap::new();
         for i in 0..symbols.len().saturating_sub(1) {
             if let Some(next) = symbols[i].next {
-                try_add_bigram(i, next, text, &symbols, merge_ranks, &mut work_queue);
+                try_add_bigram(i, next, text, &symbols, merge_ranks, vocab, &mut work_queue);
             }
         }
 
@@ -401,9 +423,17 @@ impl BPETokenizer {
             let right_text = &text
                 [symbols[right].text_start..symbols[right].text_start + symbols[right].text_len];
 
-            if let Some(&expected_rank) =
-                merge_ranks.get(&(left_text.to_string(), right_text.to_string()))
-            {
+            // Look up token IDs to key the merge rule without allocating Strings.
+            // A pair can only be a merge rule if both sides are vocabulary tokens.
+            let rank = match (
+                vocab.get_token_id(left_text),
+                vocab.get_token_id(right_text),
+            ) {
+                (Some(lid), Some(rid)) => merge_ranks.get(&(lid, rid)).copied(),
+                _ => None,
+            };
+
+            if let Some(expected_rank) = rank {
                 if expected_rank == bigram.rank {
                     // Merge: extend left symbol to include right symbol
                     symbols[left].text_len += symbols[right].text_len;
@@ -417,10 +447,26 @@ impl BPETokenizer {
 
                     // Add new potential merges with neighbors
                     if let Some(prev) = symbols[left].prev {
-                        try_add_bigram(prev, left, text, &symbols, merge_ranks, &mut work_queue);
+                        try_add_bigram(
+                            prev,
+                            left,
+                            text,
+                            &symbols,
+                            merge_ranks,
+                            vocab,
+                            &mut work_queue,
+                        );
                     }
                     if let Some(next) = symbols[left].next {
-                        try_add_bigram(left, next, text, &symbols, merge_ranks, &mut work_queue);
+                        try_add_bigram(
+                            left,
+                            next,
+                            text,
+                            &symbols,
+                            merge_ranks,
+                            vocab,
+                            &mut work_queue,
+                        );
                     }
                 }
             }
@@ -470,24 +516,13 @@ impl BPETokenizer {
         }
 
         // Pre-tokenize the original text (not byte-encoded) into word fragments.
-        let fragments = self.pre_tokenize(text, vocab).map_err(|e| {
-            crate::Error::TokenizationFailed(format!("Pre-tokenization failed: {e}"))
-        })?;
+        // Regexes were compiled once at construction — no lock, no clone here.
+        let fragments = self.pre_tokenize(text);
 
-        // Build the merge-rank map once for the whole input rather than once
-        // per fragment. For a 50k-merge vocabulary this saves significant work
-        // on long documents.
-        let merge_ranks: HashMap<(String, String), usize> = vocab
-            .get_merges()
-            .iter()
-            .enumerate()
-            .map(|(rank, (l, r))| ((l.clone(), r.clone()), rank))
-            .collect();
-
-        // Apply BPE to each fragment (after GPT-2 byte-encoding).
+        // Apply BPE to each fragment (after GPT-2 byte-encoding). Merge ranks
+        // and the ignore-merges flag were prepared once at construction.
         let mut result = Vec::new();
-        let ignore_merges = matches!(vocab.pre_type(), Some(p) if
-            matches!(p, "llama3" | "llama-v3" | "llama-bpe"));
+        let ignore_merges = self.prepared.ignore_merges;
         for fragment in fragments {
             let fragment_encoded = crate::byte_encoder::encode_bytes(&fragment);
             // llama.cpp `tokenizer_ignore_merges` optimization: if the whole
@@ -501,7 +536,7 @@ impl BPETokenizer {
                     continue;
                 }
             }
-            let tokens = self.bpe_fragment(&fragment_encoded, vocab, &merge_ranks)?;
+            let tokens = self.bpe_fragment(&fragment_encoded, vocab)?;
             if result.len() + tokens.len() > crate::MAX_OUTPUT_TOKENS {
                 return Err(crate::Error::TokenizationFailed(format!(
                     "Output would exceed max tokens: {} (max: {})",
@@ -564,7 +599,8 @@ fn try_add_bigram(
     right: usize,
     text: &str,
     symbols: &[Symbol],
-    merge_ranks: &HashMap<(String, String), usize>,
+    merge_ranks: &HashMap<(TokenId, TokenId), usize>,
+    vocab: &Vocabulary,
     work_queue: &mut BinaryHeap<Bigram>,
 ) {
     if symbols[left].text_len == 0 || symbols[right].text_len == 0 {
@@ -576,8 +612,15 @@ fn try_add_bigram(
     let right_text =
         &text[symbols[right].text_start..symbols[right].text_start + symbols[right].text_len];
 
-    if let Some(&rank) = merge_ranks.get(&(left_text.to_string(), right_text.to_string())) {
-        work_queue.push(Bigram { left, right, rank });
+    // Key the merge lookup by token IDs — no String allocation per candidate.
+    // If either side is not a vocabulary token, the pair cannot be a merge rule.
+    if let (Some(left_id), Some(right_id)) = (
+        vocab.get_token_id(left_text),
+        vocab.get_token_id(right_text),
+    ) {
+        if let Some(&rank) = merge_ranks.get(&(left_id, right_id)) {
+            work_queue.push(Bigram { left, right, rank });
+        }
     }
 }
 

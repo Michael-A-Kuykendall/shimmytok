@@ -57,6 +57,7 @@
 //! # }
 //! ```
 
+#[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use std::io::{Cursor, Read};
 use std::path::Path;
@@ -85,6 +86,53 @@ pub const MAX_INPUT_SIZE: usize = 10 * 1024 * 1024;
 /// Maximum number of output tokens (1 M). Prevents unbounded memory use on
 /// adversarial or degenerate inputs.
 pub const MAX_OUTPUT_TOKENS: usize = 1_000_000;
+
+/// Dispatch thresholds for the parallel (Rayon) batch backend.
+///
+/// [`Tokenizer::encode_batch`] only parallelizes when the batch has at least
+/// [`PARALLEL_BATCH_MIN_ITEMS`] inputs **and** their combined size reaches
+/// [`PARALLEL_BATCH_MIN_BYTES`]. Below either limit the sequential backend wins
+/// because Rayon's per-batch scheduling overhead dominates the tokenization
+/// work. These thresholds only affect *how* a batch is scheduled, never the
+/// results.
+///
+/// ## Data
+///
+/// From the model-free `batch_backends` benchmark (`benches/tokenization.rs`),
+/// comparing sequential vs parallel across batch and payload sizes, the
+/// crossover where parallel begins to win tracks **total input bytes**, not item
+/// count:
+///
+/// | payload   | per-item | crossover batch | crossover total bytes |
+/// |-----------|----------|-----------------|-----------------------|
+/// | ~8 bytes  | ~2.5 µs  | ~64             | ~500 B                |
+/// | ~1152 B   | ~300 µs  | ~2              | ~1–2 KB               |
+///
+/// A single count threshold would be wrong for one regime or the other; a
+/// combined item+byte gate matches both. `MIN_BYTES` is set above the measured
+/// crossover so parallel engages only when it is clearly ahead, and never
+/// regresses small batches. Real (larger) vocabularies have higher per-byte
+/// cost, so this byte gate is conservative — it will only ever engage parallel
+/// sooner in wall-clock terms.
+#[cfg(feature = "parallel")]
+const PARALLEL_BATCH_MIN_ITEMS: usize = 2;
+/// See [`PARALLEL_BATCH_MIN_ITEMS`].
+#[cfg(feature = "parallel")]
+const PARALLEL_BATCH_MIN_BYTES: usize = 2048;
+
+/// Reduce per-input batch results into a single `Result`, preserving order and
+/// returning the error at the **lowest failing input index**.
+///
+/// Because inputs are collected into an order-preserving `Vec` first, scanning
+/// in order yields the smallest failing index deterministically — identical for
+/// the sequential and parallel backends.
+fn finalize_batch(results: Vec<Result<Vec<TokenId>, Error>>) -> Result<Vec<Vec<TokenId>>, Error> {
+    let mut out = Vec::with_capacity(results.len());
+    for result in results {
+        out.push(result?);
+    }
+    Ok(out)
+}
 
 /// Options for encoding text (llama.cpp parity)
 ///
@@ -305,7 +353,7 @@ impl Tokenizer {
             // SentencePiece models
             "llama" | "mistral" | "gemma" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
             // BPE models
-            "gpt2" | "qwen" | "qwen2" => Box::new(bpe::BPETokenizer::new()),
+            "gpt2" | "qwen" | "qwen2" => Box::new(bpe::BPETokenizer::new(&vocab)?),
             // WPM (WordPiece) models — BERT-style
             "bert" | "wpm" => Box::new(WpmWrapper {
                 inner: wpm::WpmTokenizer::new(&vocab),
@@ -652,10 +700,17 @@ impl Tokenizer {
         self.vocab.pre_type()
     }
 
-    /// Encode multiple texts in parallel
+    /// Encode multiple texts, returning one token sequence per input.
     ///
-    /// This method uses parallel processing to encode multiple texts simultaneously,
-    /// providing significant speedup for batch operations (typically 2-4x on multi-core systems).
+    /// This method is available in every build configuration — native, WASM/WASI,
+    /// and `--no-default-features`. The result order always matches the input
+    /// order, and each element is identical to calling [`encode`](Self::encode)
+    /// on the corresponding text individually.
+    ///
+    /// On native targets built with the default `parallel` feature, large
+    /// batches may be encoded across a Rayon thread pool; smaller batches and
+    /// all other configurations run sequentially. This is an internal
+    /// implementation detail and never changes the results.
     ///
     /// # Arguments
     ///
@@ -664,8 +719,8 @@ impl Tokenizer {
     ///
     /// # Returns
     ///
-    /// Returns a vector of token ID vectors, one for each input text.
-    /// The order of outputs matches the order of inputs.
+    /// Returns a vector of token ID vectors, one for each input text, in input
+    /// order.
     ///
     /// # Example
     ///
@@ -688,10 +743,27 @@ impl Tokenizer {
         texts: &[&str],
         add_special_tokens: bool,
     ) -> Result<Vec<Vec<TokenId>>, Error> {
-        texts
-            .par_iter()
+        // Both backends collect per-input results into an order-preserving Vec,
+        // then `finalize_batch` selects the lowest-index error (if any). This
+        // makes the error deterministic and identical regardless of whether the
+        // work ran sequentially or across the Rayon thread pool.
+        #[cfg(feature = "parallel")]
+        {
+            let total_bytes: usize = texts.iter().map(|t| t.len()).sum();
+            if texts.len() >= PARALLEL_BATCH_MIN_ITEMS && total_bytes >= PARALLEL_BATCH_MIN_BYTES {
+                let results: Vec<Result<Vec<TokenId>, Error>> = texts
+                    .par_iter()
+                    .map(|text| self.encode(text, add_special_tokens))
+                    .collect();
+                return finalize_batch(results);
+            }
+        }
+
+        let results: Vec<Result<Vec<TokenId>, Error>> = texts
+            .iter()
             .map(|text| self.encode(text, add_special_tokens))
-            .collect()
+            .collect();
+        finalize_batch(results)
     }
 
     /// Decode a single token to text
@@ -769,6 +841,47 @@ impl Tokenizer {
             .get_token_text(token)
             .map(String::from)
             .ok_or_else(|| Error::InvalidToken(format!("Token ID {token} out of range")))
+    }
+
+    /// Look up the token ID for an exact token piece.
+    ///
+    /// This is the inverse of [`token_to_piece`](Self::token_to_piece): it
+    /// returns the vocabulary ID whose piece is exactly `text`, or `None` if no
+    /// such token exists.
+    ///
+    /// # Exact-match semantics
+    ///
+    /// The lookup is **exact** and performs no transformation of `text`:
+    ///
+    /// - No normalization (case, Unicode, or whitespace).
+    /// - No alternate-space handling (`▁` vs `Ġ`).
+    /// - No special-token parsing and no sub-tokenization.
+    ///
+    /// To convert arbitrary text into tokens (applying the model's
+    /// pre-tokenization and merges) use [`encode`](Self::encode) instead. Note
+    /// that BPE vocabularies store pieces in GPT-2 byte-encoded form, so a
+    /// plain-text space will not match; pass the exact stored piece.
+    ///
+    /// # Stability
+    ///
+    /// Committed for the 0.8.x series — see `docs/API_STABILITY.md`.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::Tokenizer;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+    /// if let Some(id) = tokenizer.get_token("hello") {
+    ///     println!("'hello' is token {id}");
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn get_token(&self, text: &str) -> Option<TokenId> {
+        self.vocab.get_token_id(text)
     }
 
     /// Get the type of a token

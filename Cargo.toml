@@ -1,6 +1,6 @@
 [package]
 name = "shimmytok"
-version = "0.7.4"
+version = "0.8.0"
 edition = "2021"
 rust-version = "1.70"
 authors = ["shimmytok contributors"]
@@ -15,7 +15,18 @@ documentation = "https://docs.rs/shimmytok"
 [dependencies]
 thiserror = "2.0"
 fancy-regex = "0.13"
-rayon = "1.10"
+rayon = { version = "1.10", optional = true }
+
+[features]
+default = ["parallel"]
+# Internal feature: enables Rayon-based parallel batch encoding on native targets.
+#
+# This is NOT a public API commitment. `encode_batch` is always available
+# regardless of this feature; `parallel` only controls whether large batches
+# may run across a Rayon thread pool. Builds without this feature (and WASM/WASI
+# targets) use a sequential batch backend with identical, deterministic results.
+# See docs/API_STABILITY.md.
+parallel = ["dep:rayon"]
 
 [dev-dependencies]
 tempfile = "3.0"
@@ -24,6 +35,10 @@ criterion = "0.5"
 dirs = "5.0"
 fancy-regex = "0.13"
 proptest = "1.4"
+# Available unconditionally to benchmarks so the sequential and parallel batch
+# backends can be measured head-to-head regardless of the crate's `parallel`
+# feature state.
+rayon = "1.10"
 
 [[bench]]
 name = "tokenization"

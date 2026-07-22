@@ -11,7 +11,7 @@ each item may change.
 | Level | Meaning |
 |-------|---------|
 | **Stable** | No breaking changes without a semver major bump |
-| **Committed** | Stable in all 0.7.x releases; may change at 0.8.0 with notice |
+| **Committed** | Stable within the current minor series; may change at the next minor (0.9.0) with notice in CHANGELOG |
 | **Experimental** | May change in any release; documented as `⚠️ Experimental` |
 
 ---
@@ -42,10 +42,39 @@ use shimmytok::{EncodeOptions, Tokenizer};
 
 | Type | Status |
 |------|--------|
-| `Tokenizer` | **Stable** — opaque struct, `Send + Sync` |
+| `Tokenizer` | **Stable** — opaque struct, `Send + Sync` (verified by a compile-time assertion in the test suite) |
 | `TokenId` (`u32`) | **Stable** — type alias, will not change underlying type |
 | `EncodeOptions` | **Stable** — fields are public but construct via the named constructors |
 | `Error` | **Committed** — `#[non_exhaustive]`; always match with a `_` arm |
+
+---
+
+## Batch and lookup contracts (Committed as of 0.8.0)
+
+These methods were previously internal-only. As of 0.8.0 they carry the
+**Committed** guarantee: their behaviour is fixed for the 0.8.x series and will
+only change at 0.9.0 with a CHANGELOG note.
+
+| Method | Signature | Status | Contract |
+|--------|-----------|--------|----------|
+| `tokenizer.encode_batch` | `(texts: &[&str], add_special: bool) -> Result<Vec<Vec<TokenId>>, Error>` | **Committed** | Universally available (native, WASM, and `--no-default-features`). Output order matches input order. Each element equals the corresponding single `encode` call. On multiple failures, returns the error at the **lowest failing input index**, identical across sequential and parallel backends. |
+| `tokenizer.get_token` | `(text: &str) -> Option<TokenId>` | **Committed** | Exact-match lookup only. No normalization, alternate-space handling, or special parsing. Returns the vocabulary ID for an exact token piece, or `None` if absent. |
+
+`encode_batch` never exposes Rayon (or any parallelism library) in its
+signature. Whether a batch runs in parallel is an internal, measured decision
+controlled by the `parallel` feature and a data-backed size threshold.
+
+---
+
+## Feature flags
+
+| Feature | Default | Public? | Meaning |
+|---------|---------|---------|---------|
+| `parallel` | **on** | Internal (`#[doc(hidden)]`) | Enables the Rayon parallel batch backend on native targets. Disabling it (or building for WASM/WASI) falls back to a sequential batch backend with identical, deterministic results. Never changes the public API surface. |
+
+Consumers should not rely on the presence or absence of `parallel`; it is an
+implementation detail. `encode_batch` is available and behaves identically in
+all configurations.
 
 ---
 
@@ -53,7 +82,6 @@ use shimmytok::{EncodeOptions, Tokenizer};
 
 - `DecodeOptions`
 - `decode` / `decode_with_options`
-- `encode_batch`
 - `bos_token`
 - `vocab_size`
 - `model_type` / `pre_type`

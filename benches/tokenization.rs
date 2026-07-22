@@ -1,6 +1,13 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use rayon::prelude::*;
 use shimmytok::Tokenizer;
 use std::path::Path;
+use std::time::Duration;
+
+// Reuse the in-memory GGUF fixtures from the test suite so the batch-backend
+// benchmarks run with NO model files (works locally and in CI).
+#[path = "../tests/common/mod.rs"]
+mod common;
 
 fn get_model_path() -> String {
     std::env::var("GGUF_MODEL_PATH").unwrap_or_else(|_| {
@@ -155,6 +162,63 @@ fn bench_sentencepiece_models(c: &mut Criterion) {
     }
 }
 
+/// Portable, model-free comparison of the sequential vs parallel batch
+/// backends across batch sizes and payload sizes.
+///
+/// This is the data source for the `PARALLEL_BATCH_THRESHOLD` chosen in
+/// `src/lib.rs`. It measures the two backends head-to-head so the crossover
+/// batch size (where parallel begins to win) can be read directly. Because it
+/// uses an in-memory GGUF fixture, it needs no model on disk.
+fn bench_batch_backends(c: &mut Criterion) {
+    let tok = Tokenizer::from_bytes(&common::bpe_gpt2_fixture()).expect("fixture tokenizer");
+
+    let mut group = c.benchmark_group("batch_backends");
+    // Threshold-finding does not need high precision; keep total runtime sane.
+    group.sample_size(30);
+    group.measurement_time(Duration::from_millis(800));
+    group.warm_up_time(Duration::from_millis(300));
+
+    // Two payload sizes: a short token-like input and a longer document-like
+    // input, so the per-item cost (and thus the crossover) can be compared.
+    let short = "abcacbab".to_string();
+    let long = "abcacbab ".repeat(128); // ~1 KB of BPE work per item
+
+    for (payload_name, payload) in [("short", &short), ("long", &long)] {
+        for &batch in &[1usize, 2, 4, 8, 16, 32, 64, 128, 256] {
+            let texts: Vec<&str> = vec![payload.as_str(); batch];
+
+            group.bench_with_input(
+                BenchmarkId::new(format!("sequential/{payload_name}"), batch),
+                &batch,
+                |b, _| {
+                    b.iter(|| {
+                        let r: Result<Vec<_>, _> = texts
+                            .iter()
+                            .map(|t| tok.encode(black_box(t), false))
+                            .collect();
+                        black_box(r)
+                    });
+                },
+            );
+
+            group.bench_with_input(
+                BenchmarkId::new(format!("parallel/{payload_name}"), batch),
+                &batch,
+                |b, _| {
+                    b.iter(|| {
+                        let r: Result<Vec<_>, _> = texts
+                            .par_iter()
+                            .map(|t| tok.encode(black_box(t), false))
+                            .collect();
+                        black_box(r)
+                    });
+                },
+            );
+        }
+    }
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_encode,
@@ -162,6 +226,7 @@ criterion_group!(
     bench_load,
     bench_encode_batch,
     bench_multi_pattern_models,
-    bench_sentencepiece_models
+    bench_sentencepiece_models,
+    bench_batch_backends
 );
 criterion_main!(benches);

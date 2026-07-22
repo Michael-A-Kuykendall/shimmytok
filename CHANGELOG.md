@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-22
+
+### Changed
+
+- **BPE tokenizer is now immutable and lock-free** — `BPETokenizer` pre-compiles its
+  regexes and builds a `TokenId`-keyed merge-rank map once at construction
+  (`BPETokenizer::new(&vocab) -> Result<_, Error>`). The per-encode `Mutex<HashMap>`
+  cache is gone; `get_regexes` has been removed. `pre_tokenize` no longer borrows the
+  vocabulary and `bpe_fragment`/`try_add_bigram` key merges by `(TokenId, TokenId)`
+  instead of allocating `String` merge pairs. (Internal — no public API surface change.)
+- **`encode_batch` dispatch is now data-driven** — on native targets with the default
+  `parallel` feature, batches cross to the Rayon backend only when they have at least
+  2 inputs **and** at least 2048 bytes of total input. Smaller batches run sequentially.
+  This is a scheduling detail; results are unchanged.
+
+### Added
+
+- **`parallel` feature flag (default on, `#[doc(hidden)]`)** — makes Rayon an optional
+  dependency. Disabling it (`--no-default-features` or WASM/WASI targets) falls back to
+  a sequential batch backend with **identical, deterministic results**. No public API
+  type, method, or signature changes between backends.
+- **`Tokenizer::get_token(&str) -> Option<TokenId>`** — exact-match single-token lookup
+  (delegate to `Vocabulary::get_token_id`). Useful for resolving special-token names.
+- **Portable API test suite** (`tests/test_portable_parity.rs`) — model-free fixtures and
+  a `GgufBuilder` helper assert identical behavior across the sequential and parallel
+  backends (including `Send + Sync` compile-time guarantees), independent of llama.cpp.
+
+### Stability note (API_STABILITY.md)
+
+- The "Committed" contract tier is redefined as **stable within the current minor series
+  (`0.8.x`)**: a Committed symbol may change (additively or otherwise) only at the next
+  minor bump (`0.9.0`), with a migration note. This release keeps every previously
+  Committed API backward compatible; no Stability-guaranteed symbol was broken.
+- Newly added to the Committed tier: `encode_batch`, `get_token`.
+
+### Benchmark caveats
+
+- The parallel backend is **not** a universal speedup. Benchmarking
+  (`benches/tokenization.rs`, model-free) shows the parallel/sequential crossover tracks
+  **total input bytes**, not item count: ~8 B items win at ~64 items (~500 B total);
+  ~1 KB items win from 2 items. The 2048-byte gate keeps small batches on the sequential
+  path to avoid Rayon's fixed scheduling overhead. Real vocabularies are larger, so the
+  gate is conservative (parallel engages at least as early in wall-clock terms).
+
 ## [0.7.4] - 2026-07-22
 
 ### Fixed

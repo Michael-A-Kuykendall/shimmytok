@@ -46,10 +46,15 @@ jobs:
             target
           key: ${{ runner.os }}-clippy-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run clippy lints
+      - name: Run clippy lints (default features)
         run: |
-          echo "🔍 Running clippy lints"
-          cargo clippy -- -D warnings
+          echo "🔍 Running clippy lints (default features)"
+          cargo clippy --all-targets -- -D warnings
+
+      - name: Run clippy lints (no default features)
+        run: |
+          echo "🔍 Running clippy lints (--no-default-features)"
+          cargo clippy --no-default-features --all-targets -- -D warnings
 
   test:
     name: Test Suite
@@ -77,10 +82,15 @@ jobs:
           # Note: Tests expect GPT-2 model at standard path
           # If model doesn't exist, tests will be skipped or fail gracefully
 
-      - name: Run test suite
+      - name: Run test suite (default features)
         run: |
-          echo "🧪 Running all tests (30 total)"
+          echo "🧪 Running tests (default features)"
           cargo test --verbose
+
+      - name: Run test suite (no default features)
+        run: |
+          echo "🧪 Running tests (--no-default-features: sequential backend, no Rayon)"
+          cargo test --no-default-features --verbose
 
   build:
     name: Build Verification
@@ -112,3 +122,37 @@ jobs:
       - name: Verify library builds
         run: |
           echo "✅ Build successful on ${{ matrix.os }}"
+
+  wasm:
+    name: WASM Compatibility (no-default-features)
+    runs-on: ubuntu-latest
+    needs: [fmt, clippy]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-wasm-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build for WASM (no default features)
+        run: |
+          echo "🌊 Building shimmytok for wasm32-unknown-unknown with --no-default-features"
+          cargo build --target wasm32-unknown-unknown --no-default-features --release
+
+      - name: Verify no parallel/threading deps in WASM build
+        run: |
+          echo "🔍 Confirming Rayon and crossbeam are excluded from the WASM dependency graph"
+          cargo tree --target wasm32-unknown-unknown --no-default-features --edges normal \
+            | grep -E 'rayon|crossbeam' \
+            && { echo "❌ Found parallel deps in WASM build"; exit 1; } \
+            || echo "✅ No Rayon/crossbeam in WASM dependency graph"

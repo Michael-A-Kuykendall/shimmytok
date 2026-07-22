@@ -13,7 +13,9 @@ A tokenizer library for Rust developers building LLM inference engines.
 - **Pure Rust** — No C/C++ dependencies, no FFI, compiles anywhere Rust does
 - **GGUF-native** — Loads vocabulary directly from model files; no sidecar files
 - **llama.cpp-compatible** — Validated token-for-token against `llama-tokenize`
-- **Embeddable** — Three direct dependencies (`fancy-regex`, `rayon`, `thiserror`)
+- **Embeddable** — Two mandatory dependencies (`fancy-regex`, `thiserror`); `rayon` is
+  an optional dependency enabled by the default `parallel` feature (excluded on WASM/WASI
+  and via `--no-default-features`)
 
 ## What shimmytok is not
 

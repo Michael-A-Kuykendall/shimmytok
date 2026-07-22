@@ -60,7 +60,7 @@ This release achieves **full llama.cpp tokenizer parity**:
 - 🦀 **Pure Rust** — No C++ dependencies, compiles anywhere
 - 📦 **Load from GGUF** — Tokenizer embedded in model file
 - ✅ **Validated** — Every algorithm tested against llama.cpp
-- ⚡ **Fast** — Batch encoding with Rayon parallelism
+ - ⚡ **Fast** — Batch encoding with optional Rayon parallelism for large workloads
 - 🌊 **Streaming** — Token-by-token decoding for LLM output
 - 🔒 **Safe** — Zero unsafe code in critical paths
 
@@ -166,7 +166,7 @@ tokenizer.pre_type()      // → &str (pre-tokenization pattern)
 ### Batch & Advanced
 
 ```rust
-// Parallel batch encoding
+// Batch encoding — always available; large native batches run in parallel
 let batch = tokenizer.encode_batch(&["text1", "text2"], true)?;
 
 // Token introspection
@@ -187,10 +187,13 @@ tokenizer.is_special_token(token_id) // → bool
 
 shimmytok prioritizes **correctness over speed**, but it's still fast:
 
-- Vocabulary caching (HashMap lookups)
-- Rayon-parallel batch encoding
+- Immutable per-model BPE state (regexes and merge ranks prepared once, no per-encode locks)
+- Batch encoding that dispatches to Rayon only when the workload is large enough
+  to outweigh scheduling overhead (measured crossover — see `benches/tokenization.rs`);
+  smaller batches, `--no-default-features`, and WASM/WASI run sequentially
 - Efficient trie structures for UGM/RWKV
 
+Batch results are always deterministic and order-preserving regardless of backend.
 For most use cases, tokenization is not the bottleneck — inference is.
 
 ## Links
