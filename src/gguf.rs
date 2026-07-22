@@ -279,6 +279,8 @@ enum Value {
     #[allow(dead_code)] // read via pattern-match in read_value; Debug confuses the lint
     F32(f32),
     Bool(bool),
+    #[allow(dead_code)] // Retained to consume GGUF BOOL arrays not used by tokenization.
+    BoolArray(Vec<bool>),
     String(String),
     StringArray(Vec<String>),
     I32Array(Vec<i32>),
@@ -363,6 +365,16 @@ fn read_value<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Value,
             let array_len = read_u64(reader)? as usize;
 
             match array_type {
+                7 => {
+                    // BOOL array: one byte per boolean in the GGUF wire format.
+                    let mut arr = Vec::with_capacity(array_len);
+                    for _ in 0..array_len {
+                        let mut byte = [0u8; 1];
+                        reader.read_exact(&mut byte)?;
+                        arr.push(byte[0] != 0);
+                    }
+                    Ok(Value::BoolArray(arr))
+                }
                 5 => {
                     // I32 array
                     let mut arr = Vec::with_capacity(array_len);

@@ -1,6 +1,6 @@
 # shimmytok Roadmap
 
-**Current version**: v0.7.3  
+**Current version**: v0.7.4  
 **Status**: Production ready  
 **Mission**: Pure Rust GGUF tokenizer with 100 % llama.cpp compatibility
 

@@ -24,15 +24,7 @@ const MODEL_GEMMA2_2B: &str =
     "D:/shimmy-test-models/gguf_collection/google/gemma-2-2b-it/gemma-2-2b-it-Q4_K_M.gguf";
 const MODEL_PHI2: &str = "D:/shimmy-test-models/gguf_collection/microsoft/phi-2/phi-2.Q4_K_M.gguf";
 
-/// Standard test corpus — covers ASCII, Unicode, code, punctuation, CJK.
-///
-/// Note: `"  leading and trailing spaces  "` and strings starting with multiple
-/// spaces are excluded from parity tests because of a known multi-space BPE
-/// merge discrepancy (shimmytok tokenizes each space individually rather than
-/// merging them into a vocabulary multi-space token). Tracked for future fix.
-///
-/// Similarly, `"Special chars: !@#$%^&*()"` is excluded because the `!` in
-/// certain Gemma patterns triggers a different pre-tokenization split.
+/// Standard corpus covering ASCII, Unicode, code, punctuation, and CJK.
 const CORPUS: &[&str] = &[
     "Hello world",
     "The quick brown fox jumps over the lazy dog",
@@ -44,12 +36,6 @@ const CORPUS: &[&str] = &[
     "日本語テスト",
     "Rust programming language",
     "",
-];
-
-/// Strings with known parity gaps — loaded separately to document deviations.
-const KNOWN_GAPS: &[&str] = &[
-    "  leading and trailing spaces  ", // multi-space BPE merge
-    "Special chars: !@#$%^&*()",       // ! triggers history expansion + Gemma split diff
 ];
 
 // ── llama-tokenize helper ─────────────────────────────────────────────────────
@@ -70,8 +56,7 @@ fn llama_tokens(model: &str, text: &str) -> Option<Vec<u32>> {
     let stdout = String::from_utf8_lossy(&out.stdout);
     let last = stdout
         .lines()
-        .filter(|l| l.trim_start().starts_with('['))
-        .last()?
+        .rfind(|l| l.trim_start().starts_with('['))?
         .trim();
 
     Some(

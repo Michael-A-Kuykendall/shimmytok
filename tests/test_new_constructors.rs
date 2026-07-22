@@ -35,6 +35,25 @@ fn minimal_gguf_bytes() -> Vec<u8> {
     buf
 }
 
+/// Extend the minimal fixture with the BOOL-array metadata that
+/// embeddinggemma emits in GGUF v3 files (GitHub issue #1).
+fn gguf_with_bool_array_metadata() -> Vec<u8> {
+    let mut buf = minimal_gguf_bytes();
+
+    // GGUF header layout: magic (4), version (4), tensor count (8), metadata count (8).
+    buf[16..24].copy_from_slice(&2u64.to_le_bytes());
+
+    let key = "gemma3.attention.sliding_window_pattern";
+    buf.extend_from_slice(&(key.len() as u64).to_le_bytes());
+    buf.extend_from_slice(key.as_bytes());
+    buf.extend_from_slice(&9u32.to_le_bytes()); // value type = array
+    buf.extend_from_slice(&7u32.to_le_bytes()); // element type = BOOL
+    buf.extend_from_slice(&3u64.to_le_bytes());
+    buf.extend_from_slice(&[1, 0, 1]);
+
+    buf
+}
+
 // ── from_bytes ────────────────────────────────────────────────────────────────
 
 #[test]
@@ -42,6 +61,13 @@ fn test_from_bytes_loads_tokenizer() {
     let bytes = minimal_gguf_bytes();
     let tokenizer = Tokenizer::from_bytes(&bytes).expect("from_bytes should succeed");
     assert!(tokenizer.vocab_size() >= 3);
+}
+
+#[test]
+fn test_from_bytes_accepts_bool_array_metadata() {
+    let tokenizer = Tokenizer::from_bytes(&gguf_with_bool_array_metadata())
+        .expect("GGUF BOOL arrays should not prevent tokenizer loading");
+    assert_eq!(tokenizer.vocab_size(), 3);
 }
 
 #[test]

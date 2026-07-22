@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-07-22
+
+### Fixed
+
+- **GGUF BOOL-array metadata support** — `ARRAY(BOOL)` (element type `7`) is now
+  consumed correctly during GGUF v3 metadata parsing. This fixes loading Gemma3-based
+  embedding models such as `embeddinggemma`, which include
+  `gemma3.attention.sliding_window_pattern` as a boolean array. ([#1])
+- **Real-model test harness clippy cleanup** — removed stale known-gap scaffolding and
+  used the idiomatic reverse-search iterator method.
+
 ## [0.7.3] - 2026-07-22
 
 ### Fixed
@@ -225,7 +236,8 @@ Initial release.
 - Comprehensive error handling via `thiserror`.
 - 30 tests with 100 % llama.cpp match on LLaMA, Llama-2, Llama-3, Phi-3, GPT-2.
 
-[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.4...HEAD
+[0.7.4]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.0...v0.7.1
