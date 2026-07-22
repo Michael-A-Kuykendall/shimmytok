@@ -109,8 +109,8 @@ jobs:
             DIRTY_FLAG=""
           fi
           
-          # Publish to crates.io
-          cargo publish $DIRTY_FLAG
+          # Publish to crates.io (skip if already published)
+          cargo publish $DIRTY_FLAG || echo "⚠️ Already published, skipping"
           
           echo "✅ Successfully published shimmytok ${{ github.ref_name }} to crates.io!"
           echo "📦 Users can now install with: cargo install shimmytok"
