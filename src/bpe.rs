@@ -11,14 +11,17 @@
 //!
 //! # Reference Implementation
 //! Direct port of llama.cpp's tokenizer:
-//! - Pattern definitions: `llama-vocab.cpp` lines 300-450
+//! - Pattern definitions: `llama-vocab.cpp` lines 300–450
 //! - Sequential splitting: `unicode.cpp` `unicode_regex_split_stl()`
-//! - BPE merging: `llm_tokenizer_bpe_session::tokenize()` lines 1040-1118
+//! - BPE merging: `llm_tokenizer_bpe_session::tokenize()` lines 1040–1118
 //!
 //! # Model Coverage
-//! Supports ~95% of popular model families including:
-//! - GPT-2, Llama-3, Qwen2, DeepSeek (LLM/Coder/V3/R1), StarCoder, Phi-2, Mistral
-//! - ChatGLM4, DBRX, Falcon, Bloom, Tekken, Chameleon, GPT-4o, Grok-2
+//! Supports ~95 % of popular model families including GPT-2, Llama-3, Qwen2,
+//! DeepSeek (LLM/Coder/V3/R1), StarCoder, Phi-2, Mistral, ChatGLM4, DBRX,
+//! Falcon, Bloom, Tekken, Chameleon, GPT-4o, and Grok-2.
+
+// Model names like "GPT-2", "DeepSeek" etc. inside doc comments are not Rust items.
+#![allow(clippy::doc_markdown)]
 
 use crate::vocab::Vocabulary;
 use crate::TokenId;
@@ -38,13 +41,16 @@ struct Symbol {
     next: Option<usize>,
 }
 
-/// Bigram candidate for merging, with priority rank
+/// Bigram candidate for merging, with priority rank.
+///
+/// Note: the `text` field is populated but intentionally unused after construction —
+/// it exists to match llama.cpp's data structure layout and may be used in future
+/// debug tooling.
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct Bigram {
     left: usize,
     right: usize,
     rank: usize,
-    text: String,
 }
 
 impl Ord for Bigram {
@@ -103,7 +109,7 @@ impl BPETokenizer {
     fn get_patterns(pre_type: &str) -> Vec<&'static str> {
         match pre_type {
             // Llama-3 family
-            "llama3" => vec![
+            "llama3" | "llama-v3" | "llama-bpe" => vec![
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
             ],
 
@@ -148,7 +154,7 @@ impl BPETokenizer {
             // GPT-2 family
             "gpt-2" | "phi-2" | "jina-es" | "jina-de" | "mpt" | "olmo" | "jais" | "trillion"
             | "granite-docling" | "exaone4" => {
-                vec![r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"]
+                vec![r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)"]
             }
 
             // Qwen2 family
@@ -159,16 +165,8 @@ impl BPETokenizer {
             // Bloom family
             "bloom" | "poro-chat" | "gpt3-finnish" => vec![r"\s+|\S+"],
 
-            // ChatGLM
-            "chatglm4" | "glm4" | "chatglm-bpe" => vec![
-                r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
-            ],
-
-            // Same-as-Llama-3 patterns
-            "dbrx" => vec![
-                r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
-            ],
-            "smaug-bpe" => vec![
+            // ChatGLM — same pattern as Llama-3 but with 1–3 digit numeric chunks
+            "chatglm4" | "glm4" | "chatglm-bpe" | "dbrx" | "smaug-bpe" => vec![
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
             ],
 
@@ -202,12 +200,14 @@ impl BPETokenizer {
                 r"(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
             ],
 
-            // Default case (from llama.cpp line 419-423)
-            // Used when model file doesn't specify pre-tokenizer type
+            // Default case (from llama.cpp lines 439-446)
+            // Used when model file doesn't specify pre-tokenizer type.
+            // Four patterns matching llama.cpp exactly.
             _ => vec![
                 r"[\p{P}\$\+<=>^~\|]+",
                 r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)",
                 r"\p{N}+",
+                r"[0-9][0-9][0-9]",
             ],
         }
     }
@@ -340,17 +340,12 @@ impl BPETokenizer {
     ///
     /// # Reference
     /// Direct port of llama.cpp `llm_tokenizer_bpe_session::tokenize` (lines 1040-1118)
-    fn bpe_fragment(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
-        // Text is a single word from regex pre-tokenization
-        // llama.cpp initializes with UTF-8 characters as symbols
-
-        // Build merge rank map: (left, right) -> rank
-        let merge_ranks: HashMap<(String, String), usize> = vocab
-            .get_merges()
-            .iter()
-            .enumerate()
-            .map(|(rank, (l, r))| ((l.clone(), r.clone()), rank))
-            .collect();
+    fn bpe_fragment(
+        &self,
+        text: &str,
+        vocab: &Vocabulary,
+        merge_ranks: &HashMap<(String, String), usize>,
+    ) -> Result<Vec<TokenId>, crate::Error> {
 
         // Split into UTF-8 characters as initial symbols
         let char_indices: Vec<(usize, char)> = text.char_indices().collect();
@@ -383,7 +378,7 @@ impl BPETokenizer {
         let mut work_queue = BinaryHeap::new();
         for i in 0..symbols.len().saturating_sub(1) {
             if let Some(next) = symbols[i].next {
-                self.try_add_bigram(i, next, text, &symbols, &merge_ranks, &mut work_queue);
+                try_add_bigram(i, next, text, &symbols, merge_ranks, &mut work_queue);
             }
         }
 
@@ -423,22 +418,22 @@ impl BPETokenizer {
 
                     // Add new potential merges with neighbors
                     if let Some(prev) = symbols[left].prev {
-                        self.try_add_bigram(
+                        try_add_bigram(
                             prev,
                             left,
                             text,
                             &symbols,
-                            &merge_ranks,
+                            merge_ranks,
                             &mut work_queue,
                         );
                     }
                     if let Some(next) = symbols[left].next {
-                        self.try_add_bigram(
+                        try_add_bigram(
                             left,
                             next,
                             text,
                             &symbols,
-                            &merge_ranks,
+                            merge_ranks,
                             &mut work_queue,
                         );
                     }
@@ -454,14 +449,13 @@ impl BPETokenizer {
                 if let Some(id) = vocab.get_token_id(token_text) {
                     result.push(id);
                 } else {
-                    // Byte fallback: llama.cpp looks up each byte as a single-char string
-                    // NOT using hex format <0xXX> - that's for SentencePiece only
+                    // Byte fallback: look up each byte-encoded character individually.
+                    // NOT using hex format <0xXX> — that's SentencePiece only.
                     for byte_char in token_text.chars() {
                         let byte_str = byte_char.to_string();
                         if let Some(id) = vocab.get_token_id(&byte_str) {
                             result.push(id);
                         } else {
-                            // Ultimate fallback - use unk token
                             result.push(vocab.unk_token_id());
                         }
                     }
@@ -472,38 +466,16 @@ impl BPETokenizer {
         Ok(result)
     }
 
-    /// Try to add a bigram to the work queue if it's a valid merge
-    fn try_add_bigram(
-        &self,
-        left: usize,
-        right: usize,
-        text: &str,
-        symbols: &[Symbol],
-        merge_ranks: &HashMap<(String, String), usize>,
-        work_queue: &mut BinaryHeap<Bigram>,
-    ) {
-        if symbols[left].text_len == 0 || symbols[right].text_len == 0 {
-            return;
-        }
-
-        let left_text =
-            &text[symbols[left].text_start..symbols[left].text_start + symbols[left].text_len];
-        let right_text =
-            &text[symbols[right].text_start..symbols[right].text_start + symbols[right].text_len];
-
-        if let Some(&rank) = merge_ranks.get(&(left_text.to_string(), right_text.to_string())) {
-            work_queue.push(Bigram {
-                left,
-                right,
-                rank,
-                text: format!("{left_text}{right_text}"),
-            });
-        }
-    }
-
-    /// Encode text to token IDs using BPE
+    /// Encode text to token IDs using BPE.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::TokenizationFailed`] if:
+    /// - `text` exceeds [`crate::MAX_INPUT_SIZE`]
+    /// - the pre-tokenization regex fails to compile or match
+    /// - the encoded output would exceed [`crate::MAX_OUTPUT_TOKENS`]
     pub fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
-        // Validate input size (Issue #10)
+        // Validate input size
         if text.len() > crate::MAX_INPUT_SIZE {
             return Err(crate::Error::TokenizationFailed(format!(
                 "Input text too large: {} bytes (max: {})",
@@ -512,18 +484,39 @@ impl BPETokenizer {
             )));
         }
 
-        // Pre-tokenize ORIGINAL text (not byte-encoded) into fragments
+        // Pre-tokenize the original text (not byte-encoded) into word fragments.
         let fragments = self.pre_tokenize(text, vocab).map_err(|e| {
             crate::Error::TokenizationFailed(format!("Pre-tokenization failed: {e}"))
         })?;
 
-        // Apply BPE to each fragment (after byte-encoding)
+        // Build the merge-rank map once for the whole input rather than once
+        // per fragment. For a 50k-merge vocabulary this saves significant work
+        // on long documents.
+        let merge_ranks: HashMap<(String, String), usize> = vocab
+            .get_merges()
+            .iter()
+            .enumerate()
+            .map(|(rank, (l, r))| ((l.clone(), r.clone()), rank))
+            .collect();
+
+        // Apply BPE to each fragment (after GPT-2 byte-encoding).
         let mut result = Vec::new();
+        let ignore_merges = matches!(vocab.pre_type(), Some(p) if
+            matches!(p, "llama3" | "llama-v3" | "llama-bpe"));
         for fragment in fragments {
-            // GPT-2 byte-level BPE: convert fragment bytes to unicode
             let fragment_encoded = crate::byte_encoder::encode_bytes(&fragment);
-            let tokens = self.bpe_fragment(&fragment_encoded, vocab)?;
-            // Check output size to prevent memory exhaustion
+            // llama.cpp `tokenizer_ignore_merges` optimization: if the whole
+            // byte-encoded fragment is already a single vocabulary token, emit
+            // it directly without running the merge algorithm. This is required
+            // for llama3/llama-bpe models where many multi-char tokens exist
+            // that have no explicit merge rules (e.g. "Ġ{" = token 314).
+            if ignore_merges {
+                if let Some(tok_id) = vocab.get_token_id(&fragment_encoded) {
+                    result.push(tok_id);
+                    continue;
+                }
+            }
+            let tokens = self.bpe_fragment(&fragment_encoded, vocab, &merge_ranks)?;
             if result.len() + tokens.len() > crate::MAX_OUTPUT_TOKENS {
                 return Err(crate::Error::TokenizationFailed(format!(
                     "Output would exceed max tokens: {} (max: {})",
@@ -537,7 +530,13 @@ impl BPETokenizer {
         Ok(result)
     }
 
-    /// Decode token IDs back to text
+    /// Decode token IDs back to text.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::InvalidToken`] if any token ID is not present in the
+    /// vocabulary, or [`crate::Error::TokenizationFailed`] if the decoded output
+    /// would exceed 100 MB.
     pub fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, crate::Error> {
         // Validate all token IDs exist
         for &id in tokens {
@@ -568,6 +567,32 @@ impl BPETokenizer {
         }
 
         Ok(decoded)
+    }
+}
+
+/// Try to add a bigram to the work queue if the two symbols form a valid merge pair.
+///
+/// Extracts the text of both symbols from `text` and looks up the merge rank.
+/// Does nothing if either symbol has zero length (already merged).
+fn try_add_bigram(
+    left: usize,
+    right: usize,
+    text: &str,
+    symbols: &[Symbol],
+    merge_ranks: &HashMap<(String, String), usize>,
+    work_queue: &mut BinaryHeap<Bigram>,
+) {
+    if symbols[left].text_len == 0 || symbols[right].text_len == 0 {
+        return;
+    }
+
+    let left_text =
+        &text[symbols[left].text_start..symbols[left].text_start + symbols[left].text_len];
+    let right_text =
+        &text[symbols[right].text_start..symbols[right].text_start + symbols[right].text_len];
+
+    if let Some(&rank) = merge_ranks.get(&(left_text.to_string(), right_text.to_string())) {
+        work_queue.push(Bigram { left, right, rank });
     }
 }
 

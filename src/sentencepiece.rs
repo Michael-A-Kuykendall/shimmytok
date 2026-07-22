@@ -27,14 +27,17 @@ use crate::{TokenId, TokenizerImpl, Vocabulary};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 
-/// Symbol represents a UTF-8 character or merged sequence
+/// Symbol represents a UTF-8 character or merged sequence during BPE-style merging.
 #[derive(Debug, Clone)]
 struct Symbol {
-    // Instead of storing text, store position and length in original string
-    pos: usize,          // Position in processed_text
-    len: usize,          // Length in bytes
-    prev: Option<usize>, // Previous symbol in linked list
-    next: Option<usize>, // Next symbol in linked list
+    /// Byte offset of this symbol in `processed_text`
+    pos: usize,
+    /// Length in bytes
+    len: usize,
+    /// Previous symbol index in the doubly-linked list
+    prev: Option<usize>,
+    /// Next symbol index in the doubly-linked list
+    next: Option<usize>,
 }
 
 /// Bigram candidate for merging
@@ -111,21 +114,20 @@ impl TokenizerImpl for SentencePieceTokenizer {
             return Ok(Vec::new());
         }
 
-        // Add space prefix for SentencePiece (replacing spaces with ▁)
-        // Honor the add_space_prefix flag from GGUF metadata (llama.cpp parity)
+        // Add space prefix for SentencePiece (replacing spaces with ▁).
+        // The vocabulary lookup uses get_token_id_any_space which handles both
+        // ▁ (U+2581) and Ġ (U+0120) representations transparently.
         let processed_text = if vocab.add_space_prefix() {
-            // Add leading ▁ if not already starting with space
             if text.starts_with(' ') {
                 text.replace(' ', "▁")
             } else {
                 format!("▁{}", text.replace(' ', "▁"))
             }
         } else {
-            // Don't add leading space, just replace internal spaces
             text.replace(' ', "▁")
         };
 
-        // Validate processed size (Issue R3#10) - ▁ is 3 bytes UTF-8
+        // Validate processed size — ▁ is 3 bytes UTF-8
         if processed_text.len() > crate::MAX_INPUT_SIZE {
             return Err(crate::Error::TokenizationFailed(format!(
                 "Processed text too large: {} bytes (max: {})",
@@ -316,8 +318,8 @@ impl TokenizerImpl for SentencePieceTokenizer {
                 if let Some(byte_val) = decode_byte_token(text) {
                     bytes.push(byte_val);
                 } else {
-                    // Regular token - replace ▁ with space and append bytes
-                    let normalized = text.replace('▁', " ");
+                    // Regular token - replace both ▁ and Ġ (space representations) with space
+                    let normalized = text.replace(['▁', 'Ġ'], " ");
                     bytes.extend(normalized.as_bytes());
                 }
 
@@ -372,8 +374,8 @@ fn try_add_bigram(
     // Get the combined text
     let combined_text = &text[left_sym.pos..left_sym.pos + left_sym.len + right_sym.len];
 
-    // Check if this combination exists in vocabulary
-    if let Some(token_id) = vocab.get_token_id(combined_text) {
+    // Check if this combination exists in vocabulary (try both ▁ and Ġ space forms)
+    if let Some(token_id) = vocab.get_token_id_any_space(combined_text) {
         let score = vocab.get_token_score(token_id);
 
         work_queue.push(Bigram {
@@ -408,8 +410,8 @@ fn resegment(
         return;
     }
 
-    // Try to find the text as a complete token
-    if let Some(token_id) = vocab.get_token_id(text) {
+    // Try to find the text as a complete token (try both ▁ and Ġ space forms)
+    if let Some(token_id) = vocab.get_token_id_any_space(text) {
         output.push(token_id);
         return;
     }

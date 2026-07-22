@@ -1,7 +1,8 @@
 [package]
 name = "shimmytok"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
+rust-version = "1.70"
 authors = ["shimmytok contributors"]
 description = "Pure Rust tokenizer for GGUF models with llama.cpp compatibility (SentencePiece + BPE + WPM + UGM + RWKV)"
 keywords = ["tokenizer", "gguf", "llama", "sentencepiece", "llm"]
@@ -13,7 +14,6 @@ documentation = "https://docs.rs/shimmytok"
 
 [dependencies]
 thiserror = "2.0"
-regex = "1.10"
 fancy-regex = "0.13"
 rayon = "1.10"
 

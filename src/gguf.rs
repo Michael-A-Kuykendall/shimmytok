@@ -27,6 +27,53 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
 
+/// Special token IDs loaded from GGUF metadata.
+///
+/// Groups the full set of llama.cpp special tokens so they can be passed
+/// around as a single value rather than 8+ individual `Option<u32>`s.
+/// Field names mirror the GGUF key suffixes exactly for traceability.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct SpecialTokenIds {
+    pub bos: Option<u32>,
+    pub eos: Option<u32>,
+    pub unk: Option<u32>,
+    pub pad: Option<u32>,
+    pub eot: Option<u32>,
+    pub eog: Option<u32>,
+    pub sep: Option<u32>,
+    pub nl: Option<u32>,
+    pub fim_pre: Option<u32>,
+    pub fim_suf: Option<u32>,
+    pub fim_mid: Option<u32>,
+    pub mask: Option<u32>,
+}
+
+/// Flags that control tokenization and normalization behaviour.
+#[derive(Debug, Clone, Copy)]
+pub struct TokenizationFlags {
+    pub add_bos_token: bool,
+    pub add_eos_token: bool,
+    pub add_space_prefix: bool,
+    pub clean_spaces: bool,
+    pub remove_extra_whitespaces: bool,
+    pub escape_whitespaces: bool,
+    pub treat_whitespace_as_suffix: bool,
+}
+
+impl Default for TokenizationFlags {
+    fn default() -> Self {
+        Self {
+            add_bos_token: true,
+            add_eos_token: false,
+            add_space_prefix: true,
+            clean_spaces: false,
+            remove_extra_whitespaces: false,
+            escape_whitespaces: false,
+            treat_whitespace_as_suffix: false,
+        }
+    }
+}
+
 /// Metadata extracted from a GGUF file's tokenizer section.
 ///
 /// Contains the vocabulary, merge rules, and configuration needed to
@@ -37,34 +84,62 @@ pub struct GGUFMetadata {
     pub token_types: Option<Vec<TokenType>>,
     pub model_type: String,
     pub pre_type: Option<String>,
-    pub bos_token_id: Option<u32>,
-    pub eos_token_id: Option<u32>,
-    pub unk_token_id: Option<u32>,
-    pub pad_token_id: Option<u32>,
-    // Additional special tokens (llama.cpp parity)
-    pub eot_token_id: Option<u32>,
-    pub eog_token_id: Option<u32>,
-    pub sep_token_id: Option<u32>,
-    pub nl_token_id: Option<u32>,
-    pub fim_pre_token_id: Option<u32>,
-    pub fim_suf_token_id: Option<u32>,
-    pub fim_mid_token_id: Option<u32>,
-    pub mask_token_id: Option<u32>,
-    // Flags
-    pub add_bos_token: Option<bool>,
-    pub add_eos_token: Option<bool>,
-    pub add_space_prefix: Option<bool>,
-    // Cleanup/normalization flags
-    pub clean_spaces: Option<bool>,
-    pub remove_extra_whitespaces: Option<bool>,
-    pub escape_whitespaces: Option<bool>,
-    pub treat_whitespace_as_suffix: Option<bool>,
+    /// Raw Jinja2 chat template string embedded in the GGUF file.
+    ///
+    /// This is the `tokenizer.chat_template` field from the model's metadata.
+    /// Pass it to a Jinja renderer (e.g. [`shimmyjinja`]) together with your
+    /// messages to produce a correctly formatted prompt string.
+    ///
+    /// [`shimmyjinja`]: https://crates.io/crates/shimmyjinja
+    pub chat_template: Option<String>,
+    pub special: SpecialTokenIds,
+    pub flags: TokenizationFlags,
     pub merges: Option<Vec<(String, String)>>,
 }
 
+/// Loads tokenizer metadata from a GGUF file at the given path.
+///
+/// Reads only the metadata section; tensor data is skipped entirely. This
+/// makes loading cheap even for multi-gigabyte model files.
+///
+/// # Errors
+///
+/// Returns [`Error::Io`] for file-system problems, [`Error::InvalidMetadata`]
+/// for malformed or unsupported GGUF data, and [`Error::VocabularyError`] if
+/// the tokenizer section is missing or inconsistent.
 pub fn load_metadata<P: AsRef<Path>>(path: P) -> Result<GGUFMetadata, Error> {
     let file = File::open(path)?;
-    let mut reader = BufReader::new(file);
+    load_metadata_from_reader(BufReader::new(file))
+}
+
+/// Loads tokenizer metadata from any [`Read`] source.
+///
+/// Identical to [`load_metadata`] but accepts an arbitrary reader, enabling
+/// in-memory loading (e.g. from a `Cursor<&[u8]>` or a network stream).
+///
+/// # Errors
+///
+/// Same as [`load_metadata`].
+pub fn load_metadata_from_reader<R: Read>(mut reader: R) -> Result<GGUFMetadata, Error> {
+    /// Extract an optional `u32` from a kv-pair map.
+    macro_rules! kv_u32 {
+        ($map:expr, $key:expr) => {
+            match $map.get($key) {
+                Some(Value::U32(v)) => Some(*v),
+                _ => None,
+            }
+        };
+    }
+
+    /// Extract an optional `bool` from a kv-pair map.
+    macro_rules! kv_bool {
+        ($map:expr, $key:expr) => {
+            match $map.get($key) {
+                Some(Value::Bool(v)) => Some(*v),
+                _ => None,
+            }
+        };
+    }
 
     // Track total string allocation to prevent OOM (Issue R2#3)
     let mut total_string_bytes: usize = 0;
@@ -128,104 +203,44 @@ pub fn load_metadata<P: AsRef<Path>>(path: P) -> Result<GGUFMetadata, Error> {
         _ => None,
     };
 
+    // Chat template — raw Jinja2 string, pass to shimmyjinja to render prompts
+    let chat_template = match kv_pairs.get("tokenizer.chat_template") {
+        Some(Value::String(s)) => Some(s.clone()),
+        _ => None,
+    };
+
     // Special tokens
-    let bos_token_id = match kv_pairs.get("tokenizer.ggml.bos_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
+    let special = SpecialTokenIds {
+        bos: kv_u32!(kv_pairs, "tokenizer.ggml.bos_token_id"),
+        eos: kv_u32!(kv_pairs, "tokenizer.ggml.eos_token_id"),
+        unk: kv_u32!(kv_pairs, "tokenizer.ggml.unknown_token_id"),
+        pad: kv_u32!(kv_pairs, "tokenizer.ggml.padding_token_id"),
+        eot: kv_u32!(kv_pairs, "tokenizer.ggml.eot_token_id"),
+        eog: kv_u32!(kv_pairs, "tokenizer.ggml.eog_token_id"),
+        sep: kv_u32!(kv_pairs, "tokenizer.ggml.sep_token_id"),
+        nl:  kv_u32!(kv_pairs, "tokenizer.ggml.nl_token_id"),
+        fim_pre: kv_u32!(kv_pairs, "tokenizer.ggml.fim_pre_token_id"),
+        fim_suf: kv_u32!(kv_pairs, "tokenizer.ggml.fim_suf_token_id"),
+        fim_mid: kv_u32!(kv_pairs, "tokenizer.ggml.fim_mid_token_id"),
+        mask: kv_u32!(kv_pairs, "tokenizer.ggml.mask_token_id"),
     };
 
-    let eos_token_id = match kv_pairs.get("tokenizer.ggml.eos_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
-    };
-
-    let unk_token_id = match kv_pairs.get("tokenizer.ggml.unknown_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
-    };
-
-    let pad_token_id = match kv_pairs.get("tokenizer.ggml.padding_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
-    };
-
-    // Additional special tokens (llama.cpp parity)
-    let eot_token_id = match kv_pairs.get("tokenizer.ggml.eot_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
-    };
-
-    let eog_token_id = match kv_pairs.get("tokenizer.ggml.eog_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
-    };
-
-    let sep_token_id = match kv_pairs.get("tokenizer.ggml.sep_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
-    };
-
-    let nl_token_id = match kv_pairs.get("tokenizer.ggml.nl_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
-    };
-
-    let fim_pre_token_id = match kv_pairs.get("tokenizer.ggml.fim_pre_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
-    };
-
-    let fim_suf_token_id = match kv_pairs.get("tokenizer.ggml.fim_suf_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
-    };
-
-    let fim_mid_token_id = match kv_pairs.get("tokenizer.ggml.fim_mid_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
-    };
-
-    let mask_token_id = match kv_pairs.get("tokenizer.ggml.mask_token_id") {
-        Some(Value::U32(v)) => Some(*v),
-        _ => None,
-    };
-
-    // Flags
-    let add_bos_token = match kv_pairs.get("tokenizer.ggml.add_bos_token") {
-        Some(Value::Bool(v)) => Some(*v),
-        _ => None,
-    };
-
-    let add_eos_token = match kv_pairs.get("tokenizer.ggml.add_eos_token") {
-        Some(Value::Bool(v)) => Some(*v),
-        _ => None,
-    };
-
-    let add_space_prefix = match kv_pairs.get("tokenizer.ggml.add_space_prefix") {
-        Some(Value::Bool(v)) => Some(*v),
-        _ => None,
-    };
-
-    // Cleanup/normalization flags
-    let clean_spaces = match kv_pairs.get("tokenizer.ggml.clean_spaces") {
-        Some(Value::Bool(v)) => Some(*v),
-        _ => None,
-    };
-
-    let remove_extra_whitespaces = match kv_pairs.get("tokenizer.ggml.remove_extra_whitespaces") {
-        Some(Value::Bool(v)) => Some(*v),
-        _ => None,
-    };
-
-    let escape_whitespaces = match kv_pairs.get("tokenizer.ggml.escape_whitespaces") {
-        Some(Value::Bool(v)) => Some(*v),
-        _ => None,
-    };
-
-    let treat_whitespace_as_suffix = match kv_pairs.get("tokenizer.ggml.treat_whitespace_as_suffix")
-    {
-        Some(Value::Bool(v)) => Some(*v),
-        _ => None,
+    // Tokenization flags — fall back to llama.cpp defaults when absent
+    let flags = TokenizationFlags {
+        add_bos_token: kv_bool!(kv_pairs, "tokenizer.ggml.add_bos_token")
+            .unwrap_or(true),
+        add_eos_token: kv_bool!(kv_pairs, "tokenizer.ggml.add_eos_token")
+            .unwrap_or(false),
+        add_space_prefix: kv_bool!(kv_pairs, "tokenizer.ggml.add_space_prefix")
+            .unwrap_or(true),
+        clean_spaces: kv_bool!(kv_pairs, "tokenizer.ggml.clean_spaces")
+            .unwrap_or(false),
+        remove_extra_whitespaces: kv_bool!(kv_pairs, "tokenizer.ggml.remove_extra_whitespaces")
+            .unwrap_or(false),
+        escape_whitespaces: kv_bool!(kv_pairs, "tokenizer.ggml.escape_whitespaces")
+            .unwrap_or(false),
+        treat_whitespace_as_suffix: kv_bool!(kv_pairs, "tokenizer.ggml.treat_whitespace_as_suffix")
+            .unwrap_or(false),
     };
 
     // BPE merges
@@ -249,34 +264,23 @@ pub fn load_metadata<P: AsRef<Path>>(path: P) -> Result<GGUFMetadata, Error> {
         token_types,
         model_type,
         pre_type,
-        bos_token_id,
-        eos_token_id,
-        unk_token_id,
-        pad_token_id,
-        eot_token_id,
-        eog_token_id,
-        sep_token_id,
-        nl_token_id,
-        fim_pre_token_id,
-        fim_suf_token_id,
-        fim_mid_token_id,
-        mask_token_id,
-        add_bos_token,
-        add_eos_token,
-        add_space_prefix,
-        clean_spaces,
-        remove_extra_whitespaces,
-        escape_whitespaces,
-        treat_whitespace_as_suffix,
+        chat_template,
+        special,
+        flags,
         merges,
     })
 }
 
+/// A typed value read from a GGUF metadata key-value pair.
+///
+/// Only the variants needed to reconstruct a tokenizer are surfaced here.
+/// Unrecognised type IDs return [`Error::InvalidMetadata`].
 #[derive(Debug)]
-#[allow(dead_code)]
 enum Value {
     U32(u32),
+    #[allow(dead_code)] // read via pattern-match in read_value; Debug confuses the lint
     I32(i32),
+    #[allow(dead_code)] // read via pattern-match in read_value; Debug confuses the lint
     F32(f32),
     Bool(bool),
     String(String),

@@ -13,3 +13,4 @@ Cargo.lock
 .claude/
 .cache/
 __pycache__/
+.aider*

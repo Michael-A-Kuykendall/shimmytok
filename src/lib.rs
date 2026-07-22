@@ -58,6 +58,7 @@
 //! ```
 
 use rayon::prelude::*;
+use std::io::{Cursor, Read};
 use std::path::Path;
 
 pub mod bpe;
@@ -77,14 +78,19 @@ pub use ugm::UgmTokenizer;
 pub use vocab::{TokenType, Vocabulary};
 pub use wpm::WpmTokenizer;
 
-/// Token ID type used throughout the library
-/// Maximum input text size in bytes (10MB) - Issue R4#2
+/// Maximum input text size in bytes (10 MB). Encoding larger inputs returns
+/// [`Error::TokenizationFailed`].
 pub const MAX_INPUT_SIZE: usize = 10 * 1024 * 1024;
 
-/// Maximum output tokens (1M tokens max) - prevents memory exhaustion
+/// Maximum number of output tokens (1 M). Prevents unbounded memory use on
+/// adversarial or degenerate inputs.
 pub const MAX_OUTPUT_TOKENS: usize = 1_000_000;
 
 /// Options for encoding text (llama.cpp parity)
+///
+/// Construct with [`EncodeOptions::with_special_tokens`] for the common case or
+/// [`EncodeOptions::with_parse_special`] when the input may contain literal
+/// special-token strings such as `<|eot_id|>`.
 #[derive(Debug, Clone, Default)]
 pub struct EncodeOptions {
     /// Add BOS/EOS tokens according to model configuration
@@ -114,6 +120,10 @@ impl EncodeOptions {
 }
 
 /// Options for decoding tokens (llama.cpp parity)
+///
+/// Construct with [`DecodeOptions::with_skip_special`] for the common case, or
+/// [`DecodeOptions::new`] for full control over whitespace stripping and
+/// special-token text emission.
 #[derive(Debug, Clone, Default)]
 pub struct DecodeOptions {
     /// Skip special tokens (BOS, EOS, etc.) in output
@@ -146,11 +156,11 @@ impl DecodeOptions {
     }
 }
 
-/// Type alias for token IDs
+/// Type alias for token IDs.
 ///
-/// Token IDs are represented as u32 to match GGUF format and llama.cpp implementation.
-/// This is safe because vocabulary size is limited to `MAX_VOCAB_SIZE` (1M tokens),
-/// which is well below `u32::MAX` (4.2B). (Issue R2#10)
+/// `u32` matches the GGUF wire format and llama.cpp's internal representation.
+/// It is safe because vocabulary size is bounded by [`vocab::Vocabulary`]'s
+/// 1 M-token limit, well below `u32::MAX` (4.2 B).
 pub type TokenId = u32;
 
 /// Main tokenizer interface for encoding and decoding text
@@ -180,61 +190,30 @@ trait TokenizerImpl: Send + Sync {
     fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error>;
 }
 
-// Wrapper for WPM tokenizer to implement TokenizerImpl
-struct WpmWrapper {
-    inner: wpm::WpmTokenizer,
+/// Generate a `TokenizerImpl` wrapper struct for tokenizers whose `encode`/`decode`
+/// methods match the trait signature. This avoids repeating the same forwarding
+/// boilerplate for every algorithm variant.
+macro_rules! impl_tokenizer_wrapper {
+    ($wrapper:ident, $inner:path) => {
+        struct $wrapper {
+            inner: $inner,
+        }
+
+        impl TokenizerImpl for $wrapper {
+            fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, Error> {
+                self.inner.encode(text, vocab)
+            }
+            fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error> {
+                self.inner.decode(tokens, vocab)
+            }
+        }
+    };
 }
 
-impl TokenizerImpl for WpmWrapper {
-    fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, Error> {
-        self.inner.encode(text, vocab)
-    }
-    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error> {
-        self.inner.decode(tokens, vocab)
-    }
-}
-
-// Wrapper for RWKV tokenizer to implement TokenizerImpl
-struct RwkvWrapper {
-    inner: rwkv::RwkvTokenizer,
-}
-
-impl TokenizerImpl for RwkvWrapper {
-    fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, Error> {
-        self.inner.encode(text, vocab)
-    }
-    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error> {
-        self.inner.decode(tokens, vocab)
-    }
-}
-
-// Wrapper for UGM tokenizer to implement TokenizerImpl
-struct UgmWrapper {
-    inner: ugm::UgmTokenizer,
-}
-
-impl TokenizerImpl for UgmWrapper {
-    fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, Error> {
-        self.inner.encode(text, vocab)
-    }
-    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error> {
-        self.inner.decode(tokens, vocab)
-    }
-}
-
-// Wrapper for PLaMo-2 tokenizer to implement TokenizerImpl
-struct Plamo2Wrapper {
-    inner: plamo2::Plamo2Tokenizer,
-}
-
-impl TokenizerImpl for Plamo2Wrapper {
-    fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, Error> {
-        self.inner.encode(text, vocab)
-    }
-    fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, Error> {
-        self.inner.decode(tokens, vocab)
-    }
-}
+impl_tokenizer_wrapper!(WpmWrapper, wpm::WpmTokenizer);
+impl_tokenizer_wrapper!(RwkvWrapper, rwkv::RwkvTokenizer);
+impl_tokenizer_wrapper!(UgmWrapper, ugm::UgmTokenizer);
+impl_tokenizer_wrapper!(Plamo2Wrapper, plamo2::Plamo2Tokenizer);
 
 impl Tokenizer {
     /// Load a tokenizer from a GGUF model file
@@ -243,10 +222,10 @@ impl Tokenizer {
     ///
     /// * `path` - Path to the GGUF file containing model and tokenizer data
     ///
-    /// # Returns
+    /// # Errors
     ///
-    /// Returns `Ok(Tokenizer)` on success, or `Err(Error)` if the file cannot be read,
-    /// is not a valid GGUF file, or contains an unsupported tokenizer type.
+    /// Returns `Err(Error)` if the file cannot be read, is not a valid GGUF
+    /// file, or contains an unsupported tokenizer type.
     ///
     /// # Example
     ///
@@ -261,28 +240,88 @@ impl Tokenizer {
     #[must_use = "from_gguf_file returns a Result that must be handled"]
     pub fn from_gguf_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let vocab = Vocabulary::from_gguf_file(path)?;
+        Self::from_vocab(vocab)
+    }
+
+    /// Load a tokenizer from any [`Read`] source.
+    ///
+    /// Useful for loading from network streams, embedded assets, or any
+    /// in-memory byte source. For loading from a file path prefer
+    /// [`from_gguf_file`](Self::from_gguf_file).
+    ///
+    /// # Errors
+    ///
+    /// Same as [`from_gguf_file`](Self::from_gguf_file).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::Tokenizer;
+    /// use std::fs::File;
+    /// use std::io::BufReader;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let reader = BufReader::new(File::open("model.gguf")?);
+    /// let tokenizer = Tokenizer::from_reader(reader)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use = "from_reader returns a Result that must be handled"]
+    pub fn from_reader<R: Read>(reader: R) -> Result<Self, Error> {
+        let vocab = Vocabulary::from_reader(reader)?;
+        Self::from_vocab(vocab)
+    }
+
+    /// Load a tokenizer from a byte slice containing a GGUF file.
+    ///
+    /// Convenience wrapper around [`from_reader`](Self::from_reader) for the
+    /// common case where the model is already loaded into memory — for example
+    /// in WASM applications or embedded systems.
+    ///
+    /// # Errors
+    ///
+    /// Same as [`from_gguf_file`](Self::from_gguf_file).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::Tokenizer;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let bytes: Vec<u8> = std::fs::read("model.gguf")?;
+    /// let tokenizer = Tokenizer::from_bytes(&bytes)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use = "from_bytes returns a Result that must be handled"]
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        Self::from_reader(Cursor::new(bytes))
+    }
+
+    /// Shared construction logic — builds a `Tokenizer` from an already-loaded
+    /// `Vocabulary`. All public constructors funnel through here.
+    fn from_vocab(vocab: Vocabulary) -> Result<Self, Error> {
 
         let tokenizer_impl: Box<dyn TokenizerImpl> = match vocab.model_type() {
             // SentencePiece models
-            "llama" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
-            "mistral" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
-            "gemma" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
+            "llama" | "mistral" | "gemma" => {
+                Box::new(sentencepiece::SentencePieceTokenizer::new())
+            }
             // BPE models
-            "gpt2" => Box::new(bpe::BPETokenizer::new()),
-            "qwen" | "qwen2" => Box::new(bpe::BPETokenizer::new()),
-            // WPM (WordPiece) models - BERT-style
+            "gpt2" | "qwen" | "qwen2" => Box::new(bpe::BPETokenizer::new()),
+            // WPM (WordPiece) models — BERT-style
             "bert" | "wpm" => Box::new(WpmWrapper {
                 inner: wpm::WpmTokenizer::new(&vocab),
             }),
-            // RWKV models - trie-based greedy
+            // RWKV models — trie-based greedy
             "rwkv" => Box::new(RwkvWrapper {
                 inner: rwkv::RwkvTokenizer::new(&vocab),
             }),
-            // UGM (Unigram) models - T5-style Viterbi
+            // UGM (Unigram) models — T5-style Viterbi
             "t5" | "ugm" => Box::new(UgmWrapper {
                 inner: ugm::UgmTokenizer::new(&vocab),
             }),
-            // PLaMo-2 models - table-driven DP
+            // PLaMo-2 models — table-driven DP
             "plamo2" => Box::new(Plamo2Wrapper {
                 inner: plamo2::Plamo2Tokenizer::new(&vocab)?,
             }),
@@ -298,6 +337,37 @@ impl Tokenizer {
         invariants::assert_vocabulary_consistent(&tokenizer);
 
         Ok(tokenizer)
+    }
+
+    /// Get the raw Jinja2 chat template string embedded in the GGUF file.
+    ///
+    /// Most GGUF models include a `tokenizer.chat_template` field — a Jinja2
+    /// template that formats a conversation into the exact prompt format the
+    /// model was trained on.
+    ///
+    /// Pass the returned string to a Jinja renderer such as
+    /// [`shimmyjinja`](https://crates.io/crates/shimmyjinja) to produce a
+    /// correctly formatted prompt, then encode the result with
+    /// [`encode`](Self::encode).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use shimmytok::Tokenizer;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+    ///
+    /// if let Some(template) = tokenizer.chat_template() {
+    ///     // Pass `template` to shimmyjinja::render_chat_template(...)
+    ///     println!("Chat template: {} chars", template.len());
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn chat_template(&self) -> Option<&str> {
+        self.vocab.chat_template()
     }
 
     /// Encode text into a sequence of token IDs
@@ -470,21 +540,23 @@ impl Tokenizer {
         // invalid tokens by returning Error::InvalidToken.
 
         // Filter tokens based on options
-        let filtered_tokens: Vec<TokenId> = if options.skip_special_tokens {
-            tokens
+        let filtered: Vec<TokenId>;
+        let filtered_tokens: &[TokenId] = if options.skip_special_tokens {
+            filtered = tokens
                 .iter()
                 .copied()
                 .filter(|&id| !self.vocab.is_special_token(id))
-                .collect()
+                .collect();
+            &filtered
         } else {
-            tokens.to_vec()
+            tokens
         };
 
         // If we need special handling (lstrip or include_special_text=false),
         // we need to decode token by token
         let mut result = if options.lstrip || !options.include_special_text {
             let mut result = String::new();
-            for &token_id in &filtered_tokens {
+            for &token_id in filtered_tokens {
                 // Skip special text if requested
                 if !options.include_special_text && self.vocab.is_special_token(token_id) {
                     continue;
@@ -505,7 +577,7 @@ impl Tokenizer {
             result
         } else {
             // Standard decode path
-            self.tokenizer_impl.decode(&filtered_tokens, &self.vocab)?
+            self.tokenizer_impl.decode(filtered_tokens, &self.vocab)?
         };
 
         // Apply clean_spaces post-processing if enabled in vocab (llama.cpp parity)
@@ -791,7 +863,7 @@ fn split_on_special_tokens(
 
     // Sort special tokens by length descending (longest match first)
     let mut special_tokens: Vec<_> = special_map.iter().collect();
-    special_tokens.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    special_tokens.sort_by_key(|b| std::cmp::Reverse(b.0.len()));
 
     let mut result = Vec::new();
     let mut remaining = text;
@@ -831,65 +903,61 @@ fn split_on_special_tokens(
     result
 }
 
-/// Apply llama.cpp clean_spaces post-processing to decoded text
+/// Apply llama.cpp `clean_spaces` post-processing to decoded text.
 ///
-/// This implements the cleanup passes from llama.cpp's detokenize function:
-/// 1. Remove space before punctuation: ` ?` → `?`, ` !` → `!`, ` .` → `.`, ` ,` → `,`
-/// 2. Strip single apostrophe between spaces: ` ' ` → `'`
-/// 3. Merge apostrophe contractions: ` 'm` → `'m`, ` 's` → `'s`, ` 've` → `'ve`, ` 're` → `'re`
+/// Implements the three cleanup passes from llama.cpp's `detokenize`:
+///
+/// | Pass | Transformation |
+/// |------|---------------|
+/// | 1 | Remove space before `?`, `!`, `.`, `,` |
+/// | 2 | Strip isolated apostrophe surrounded by spaces: ` ' ` → `'` |
+/// | 3 | Merge contractions: ` 'm`, ` 's`, ` 've`, ` 're` → drop the space |
+///
+/// The implementation collects to `Vec<char>` so that O(1) index access
+/// across all three passes avoids repeated UTF-8 scanning.
 fn apply_clean_spaces(text: &str) -> String {
     let mut chars: Vec<char> = text.chars().collect();
     if chars.is_empty() {
         return String::new();
     }
 
-    // Pass 1: Remove space before punctuation ?!.,
+    // Pass 1: remove the space immediately before ?  !  .  ,
     let mut i = 1;
     while i < chars.len() {
         if chars[i - 1] == ' ' && matches!(chars[i], '?' | '!' | '.' | ',') {
             chars.remove(i - 1);
-            // Don't increment i since we removed an element
+            // Don't advance — the element at i-1 is now what was at i+1.
         } else {
             i += 1;
         }
     }
 
-    // Pass 2: Strip single apostrophe between spaces: " ' " → "'"
+    // Pass 2: collapse ` ' ` (apostrophe flanked by spaces) to just `'`
     let mut i = 1;
     while i + 1 < chars.len() {
-        if chars[i] == '\'' && chars[i - 1] == ' ' && chars.get(i + 1) == Some(&' ') {
-            // Remove the space before the apostrophe
-            chars.remove(i - 1);
-            // Now apostrophe is at i-1, space is at i
-            chars.remove(i);
-            // Don't increment since we modified the array
+        if chars[i] == '\'' && chars[i - 1] == ' ' && chars[i + 1] == ' ' {
+            chars.remove(i - 1); // remove leading space
+            chars.remove(i);     // remove trailing space (now at index i)
         } else {
             i += 1;
         }
     }
 
-    // Pass 3: Apostrophe contractions - remove space before certain patterns
-    // ` 'm` → `'m`, ` 's` → `'s`, ` 've` → `'ve`, ` 're` → `'re`
+    // Pass 3: remove the space before English contractions
+    //   ` 'm`, ` 's`, ` 've`, ` 're`
     let mut i = 1;
     while i + 1 < chars.len() {
         if chars[i - 1] == ' ' && chars[i] == '\'' {
             let next = chars.get(i + 1);
             let next2 = chars.get(i + 2);
 
-            let should_remove_space = match (next, next2) {
-                // ` 's`, ` 'm`
-                (Some('s'), _) | (Some('m'), _) => true,
-                // ` 've`, ` 're`
-                (Some('v'), Some('e')) | (Some('r'), Some('e')) => true,
-                // ` 't`, ` 'd`, ` 'll` - llama.cpp comments these out but we include for completeness
-                // (Some('t'), _) | (Some('d'), _) => true,
-                // (Some('l'), Some('l')) => true,
-                _ => false,
-            };
+            let is_contraction = matches!(
+                (next, next2),
+                (Some('s' | 'm'), _) | (Some('v' | 'r'), Some('e'))
+            );
 
-            if should_remove_space {
+            if is_contraction {
                 chars.remove(i - 1);
-                // Don't increment
             } else {
                 i += 1;
             }
@@ -901,7 +969,13 @@ fn apply_clean_spaces(text: &str) -> String {
     chars.into_iter().collect()
 }
 
+/// Errors that can be returned by shimmytok operations.
+///
+/// This enum is `#[non_exhaustive]` — new variants may be added in minor
+/// releases without breaking downstream `match` expressions that include a
+/// `_` arm.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum Error {
     #[error("Failed to read GGUF file: {0}")]
     GGUFRead(String),

@@ -22,31 +22,45 @@ use crate::{Error, TokenId};
 use std::collections::HashMap;
 use std::path::Path;
 
+/// Classification of a token in the vocabulary.
+///
+/// These values match the integer codes stored in `tokenizer.ggml.token_type`
+/// arrays inside GGUF files and are identical to the constants used by
+/// llama.cpp's `LLAMA_TOKEN_TYPE_*` enum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(i32)]
 pub enum TokenType {
-    Undefined = 0,
-    Normal = 1,
-    Unknown = 2,
-    Control = 3,
+    Undefined   = 0,
+    Normal      = 1,
+    Unknown     = 2,
+    Control     = 3,
     UserDefined = 4,
-    Unused = 5,
-    Byte = 6,
+    Unused      = 5,
+    Byte        = 6,
 }
 
 impl From<i32> for TokenType {
     fn from(value: i32) -> Self {
         match value {
-            1 => TokenType::Normal,
-            2 => TokenType::Unknown,
-            3 => TokenType::Control,
-            4 => TokenType::UserDefined,
-            5 => TokenType::Unused,
-            6 => TokenType::Byte,
-            _ => TokenType::Undefined,
+            1 => Self::Normal,
+            2 => Self::Unknown,
+            3 => Self::Control,
+            4 => Self::UserDefined,
+            5 => Self::Unused,
+            6 => Self::Byte,
+            _ => Self::Undefined,
         }
     }
 }
 
+/// The vocabulary loaded from a GGUF model file.
+///
+/// Holds all token strings, scores, type classifications, merge rules, and
+/// special-token IDs. Constructed by [`Vocabulary::from_gguf_file`] and then
+/// owned by [`crate::Tokenizer`].
+///
+/// All index-based accessors (`get_token_text`, `get_token_score`, etc.) are
+/// O(1) via pre-built `Vec` and `HashMap` structures populated at load time.
 pub struct Vocabulary {
     tokens: Vec<String>,
     scores: Vec<f32>,
@@ -55,8 +69,9 @@ pub struct Vocabulary {
 
     // Model metadata
     model_type: String,
-    #[allow(dead_code)]
     pre_type: String,
+    /// Raw Jinja2 chat template string from the GGUF file, if present.
+    chat_template: Option<String>,
 
     // Special tokens
     bos_token_id: TokenId,
@@ -90,6 +105,16 @@ pub struct Vocabulary {
 impl Vocabulary {
     pub fn from_gguf_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let metadata = crate::gguf::load_metadata(path)?;
+        Self::from_metadata(metadata)
+    }
+
+    /// Load a vocabulary from any [`std::io::Read`] source.
+    pub fn from_reader<R: std::io::Read>(reader: R) -> Result<Self, Error> {
+        let metadata = crate::gguf::load_metadata_from_reader(reader)?;
+        Self::from_metadata(metadata)
+    }
+
+    fn from_metadata(metadata: crate::gguf::GGUFMetadata) -> Result<Self, Error> {
 
         const MAX_VOCAB_SIZE: usize = 1_000_000; // 1M tokens max
         const MAX_TOKEN_LENGTH: usize = 1024; // 1KB per token max
@@ -190,27 +215,28 @@ impl Vocabulary {
 
             model_type: metadata.model_type,
             pre_type: metadata.pre_type.unwrap_or_else(|| "default".to_string()),
+            chat_template: metadata.chat_template,
 
-            bos_token_id: metadata.bos_token_id.unwrap_or(1),
-            eos_token_id: metadata.eos_token_id.unwrap_or(2),
-            unk_token_id: metadata.unk_token_id.unwrap_or(0),
-            pad_token_id: metadata.pad_token_id,
-            eot_token_id: metadata.eot_token_id,
-            eog_token_id: metadata.eog_token_id,
-            sep_token_id: metadata.sep_token_id,
-            nl_token_id: metadata.nl_token_id,
-            fim_pre_token_id: metadata.fim_pre_token_id,
-            fim_suf_token_id: metadata.fim_suf_token_id,
-            fim_mid_token_id: metadata.fim_mid_token_id,
-            mask_token_id: metadata.mask_token_id,
+            bos_token_id: metadata.special.bos.unwrap_or(1),
+            eos_token_id: metadata.special.eos.unwrap_or(2),
+            unk_token_id: metadata.special.unk.unwrap_or(0),
+            pad_token_id: metadata.special.pad,
+            eot_token_id: metadata.special.eot,
+            eog_token_id: metadata.special.eog,
+            sep_token_id: metadata.special.sep,
+            nl_token_id:  metadata.special.nl,
+            fim_pre_token_id: metadata.special.fim_pre,
+            fim_suf_token_id: metadata.special.fim_suf,
+            fim_mid_token_id: metadata.special.fim_mid,
+            mask_token_id: metadata.special.mask,
 
-            add_bos_token: metadata.add_bos_token.unwrap_or(true),
-            add_eos_token: metadata.add_eos_token.unwrap_or(false),
-            add_space_prefix: metadata.add_space_prefix.unwrap_or(true),
-            clean_spaces: metadata.clean_spaces.unwrap_or(false),
-            remove_extra_whitespaces: metadata.remove_extra_whitespaces.unwrap_or(false),
-            escape_whitespaces: metadata.escape_whitespaces.unwrap_or(false),
-            treat_whitespace_as_suffix: metadata.treat_whitespace_as_suffix.unwrap_or(false),
+            add_bos_token:             metadata.flags.add_bos_token,
+            add_eos_token:             metadata.flags.add_eos_token,
+            add_space_prefix:          metadata.flags.add_space_prefix,
+            clean_spaces:              metadata.flags.clean_spaces,
+            remove_extra_whitespaces:  metadata.flags.remove_extra_whitespaces,
+            escape_whitespaces:        metadata.flags.escape_whitespaces,
+            treat_whitespace_as_suffix: metadata.flags.treat_whitespace_as_suffix,
 
             merges: metadata.merges.unwrap_or_default(),
         })
@@ -221,9 +247,45 @@ impl Vocabulary {
         &self.model_type
     }
 
+    /// Returns the raw Jinja2 chat template string from the GGUF file, if present.
+    ///
+    /// Pass this to a Jinja renderer such as
+    /// [`shimmyjinja`](https://crates.io/crates/shimmyjinja) together with your
+    /// conversation messages to produce a correctly formatted prompt string
+    /// before encoding.
+    #[must_use]
+    pub fn chat_template(&self) -> Option<&str> {
+        self.chat_template.as_deref()
+    }
+
     #[must_use]
     pub fn get_token_id(&self, text: &str) -> Option<TokenId> {
         self.token_to_id.get(text).copied()
+    }
+
+    /// Look up a token ID, trying both space representations.
+    ///
+    /// Some models store the SentencePiece space prefix as `▁` (U+2581),
+    /// others as `Ġ` (U+0120, GPT-2 byte-encoder). This tries the given text
+    /// first, then swaps one representation for the other if not found.
+    #[must_use]
+    pub fn get_token_id_any_space(&self, text: &str) -> Option<TokenId> {
+        if let Some(id) = self.token_to_id.get(text).copied() {
+            return Some(id);
+        }
+        // Try swapping ▁ ↔ Ġ
+        if text.contains('▁') {
+            let alt = text.replace('▁', "Ġ");
+            if let Some(id) = self.token_to_id.get(&alt).copied() {
+                return Some(id);
+            }
+        } else if text.contains('Ġ') {
+            let alt = text.replace('Ġ', "▁");
+            if let Some(id) = self.token_to_id.get(&alt).copied() {
+                return Some(id);
+            }
+        }
+        None
     }
 
     #[must_use]

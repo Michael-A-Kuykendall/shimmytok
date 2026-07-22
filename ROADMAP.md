@@ -1,156 +1,158 @@
 # shimmytok Roadmap
 
-**Current Version**: v0.7.1  
-**Status**: Production Ready  
-**Mission**: Pure Rust GGUF tokenizer with 100% llama.cpp compatibility
+**Current version**: v0.7.2  
+**Status**: Production ready  
+**Mission**: Pure Rust GGUF tokenizer with 100 % llama.cpp compatibility
 
 ---
 
-## What shimmytok Is
+## What shimmytok is
 
 A tokenizer library for Rust developers building LLM inference engines.
 
-- **Pure Rust** - No C/C++ dependencies, no FFI
-- **GGUF Native** - Loads vocab directly from model files
-- **llama.cpp Compatible** - Validated against `llama-tokenize`
-- **Embeddable** - Single dependency for Rust inference projects
+- **Pure Rust** — No C/C++ dependencies, no FFI, compiles anywhere Rust does
+- **GGUF-native** — Loads vocabulary directly from model files; no sidecar files
+- **llama.cpp-compatible** — Validated token-for-token against `llama-tokenize`
+- **Embeddable** — Three direct dependencies (`fancy-regex`, `rayon`, `thiserror`)
 
-## What shimmytok Is NOT
+## What shimmytok is not
 
 - A tokenizer training library
-- A Python library (use HuggingFace tokenizers)
+- A Python library (use HuggingFace `tokenizers`)
 - A general-purpose NLP toolkit
-- A model inference engine (that's libshimmy)
+- A model inference engine (see [libshimmy](https://github.com/Michael-A-Kuykendall/libshimmy))
 
 ---
 
-## Current State (v0.7.x)
+## Current state (v0.7.x)
 
-### Tokenizer Support
+### Tokenizer support
 
 | Algorithm | Models | Status |
 |-----------|--------|--------|
-| SentencePiece | Llama, Mistral, Gemma | Validated |
-| BPE | GPT-2, Qwen, StarCoder, DeepSeek | Validated |
-| WPM | BERT | Validated |
-| UGM | T5-style | Implemented, needs GGUF model |
-| RWKV | RWKV World | Implemented, needs GGUF model |
-| PLaMo-2 | PLaMo | Implemented, no GGUF exists |
+| SentencePiece (SPM) | LLaMA, Mistral, Gemma, Phi-3 | ✅ Validated |
+| BPE | GPT-2, Qwen2, StarCoder, DeepSeek, Falcon, … | ✅ Validated |
+| WordPiece (WPM) | BERT, BGE embeddings | ✅ Validated |
+| Unigram (UGM) | T5-style | ⚠️ Implemented — needs GGUF fixture |
+| RWKV | RWKV World | ⚠️ Implemented — needs GGUF fixture |
+| PLaMo-2 | PLaMo-2 | ⚠️ Implemented — no public GGUF exists |
 
-### API Surface (Stable)
+**41 BPE pre-tokenization patterns** are implemented, covering GPT-2, Llama-3, Qwen2,
+DeepSeek (LLM / Coder / V3 / R1), StarCoder, Falcon, Command-R, ChatGLM4, DBRX,
+Tekken, Grok-2, and more.
+
+### Stable API surface
 
 ```rust
 // Load
 Tokenizer::from_gguf_file(path) -> Result<Tokenizer>
 
 // Encode
-tokenizer.encode(text, add_special) -> Result<Vec<u32>>
-tokenizer.encode_batch(texts, add_special) -> Result<Vec<Vec<u32>>>
+tokenizer.encode(text, add_special)             -> Result<Vec<TokenId>>
+tokenizer.encode_with_options(text, &opts)      -> Result<Vec<TokenId>>
+tokenizer.encode_batch(texts, add_special)      -> Result<Vec<Vec<TokenId>>>
 
-// Decode  
-tokenizer.decode(tokens, skip_special) -> Result<String>
-tokenizer.decode_single(token) -> Result<String>
+// Decode
+tokenizer.decode(tokens, skip_special)          -> Result<String>
+tokenizer.decode_with_options(tokens, &opts)    -> Result<String>
+tokenizer.decode_single(token, skip_special)    -> Result<String>
 
-// Metadata
-tokenizer.vocab_size() -> usize
-tokenizer.bos_token() -> u32
-tokenizer.eos_token() -> u32
-tokenizer.model_type() -> &str
+// Introspection
+tokenizer.vocab_size()          -> usize
+tokenizer.bos_token()           -> TokenId
+tokenizer.eos_token()           -> TokenId
+tokenizer.model_type()          -> &str
+tokenizer.pre_type()            -> Option<&str>
+tokenizer.token_to_piece(id)    -> Result<String>
+tokenizer.token_type(id)        -> TokenType
+tokenizer.is_special_token(id)  -> bool
 ```
+
+### Minimum Supported Rust Version (MSRV)
+
+**Rust 1.70** (stable). This will not be raised without a minor-version bump.
 
 ---
 
 ## Roadmap
 
-### v0.8.0 - Performance
+### v0.8.0 — Performance
 
-Focus: Make it fast without breaking correctness.
+Goal: measurable throughput improvements without touching the public API.
 
-- [ ] Benchmark suite against HuggingFace tokenizers
-- [ ] Profile hot paths (vocab lookup, BPE merge)
-- [ ] Consider SIMD for batch operations
-- [ ] Memory allocation optimization
+- [ ] Criterion benchmark suite published to track regressions across releases
+- [ ] Profile BPE hot path — `merge_ranks` HashMap key allocation under load
+- [ ] Profile SPM hot path — `rev_merge` HashMap growth on long documents
+- [ ] Evaluate arc-interned string keys for merge-rank maps
+- [ ] Rayon threshold tuning for `encode_batch` (parallelism overhead on small batches)
+- [ ] Memory allocation audit — avoid unnecessary intermediate `Vec<String>` in BPE
+      pre-tokenizer for long documents
 
-Success metric: Within 2x of tiktoken for BPE, within 2x of sentencepiece for SPM.
+**Success metric**: encode throughput within 2× of `tiktoken` for BPE models;
+within 2× of the `sentencepiece` C library for SPM models, measured on a standard
+text corpus.
 
-### v0.9.0 - Production Hardening
+### v0.9.0 — Production hardening
 
-Focus: Ready for untrusted input in production.
+Goal: safe to deploy where inputs come from untrusted sources.
 
-- [ ] Fuzz testing with cargo-fuzz
-- [ ] Memory limit enforcement (already started)
-- [ ] Malformed GGUF handling
-- [ ] Error message improvements
+- [ ] Fuzz corpus with `cargo-fuzz` (AFL targets for GGUF parsing and encode/decode)
+- [ ] Malformed GGUF edge-case tests (truncated arrays, impossible counts, NaN scores)
+- [ ] UGM / RWKV validation once commodity GGUF fixtures become available
+- [ ] Error message audit — all `Error` variants must name the offending field/value
 
-Success metric: No panics on any input, clear error messages.
+**Success metric**: no panics on any input in `cargo fuzz` after 24 h corpus run.
 
-### v1.0.0 - Stable Release
+### v1.0.0 — Stable release
 
-Focus: API stability commitment.
+Goal: public API stability commitment.
 
-- [ ] API review and freeze
-- [ ] Documentation audit
-- [ ] crates.io publish with stable guarantees
-- [ ] MSRV policy (minimum supported Rust version)
+- [ ] API review and freeze — semver guarantee from this point forward
+- [ ] MSRV policy formalised in `Cargo.toml` (`rust-version` field)
+- [ ] Documentation audit — every public item has a doc-comment and at least one example
+- [ ] `#![deny(missing_docs)]` enabled
+- [ ] Published MSRV CI matrix (MSRV, stable, beta, nightly)
 
-Success metric: Semver commitment, no breaking changes in 1.x.
+**Success metric**: no breaking changes in the 1.x line.
 
 ---
 
-## Out of Scope (Will Not Implement)
-
-These are intentionally excluded to keep shimmytok focused:
+## Intentionally out of scope
 
 | Feature | Reason | Alternative |
 |---------|--------|-------------|
-| Tokenizer training | Not our lane | SentencePiece, tokenizers |
-| Non-GGUF formats | GGUF-only scope | HuggingFace tokenizers |
-| Python bindings | Rust-first library | PyO3 wrapper by others |
+| Tokenizer training | Not this library's lane | SentencePiece, `tokenizers` |
+| Non-GGUF formats | GGUF-only scope | HuggingFace `tokenizers` |
+| Python bindings | Rust-first; wrap it yourself | PyO3 |
 | Model inference | Tokenizer only | libshimmy |
-| Streaming encode | Complexity vs value | Chunk input yourself |
-| Async loading | Complexity vs value | spawn_blocking |
+| Async `from_gguf_file` | Use `spawn_blocking` | `tokio::task::spawn_blocking` |
+| Streaming encode iterator | Low demand vs. complexity | Chunk the input yourself |
 
 ---
 
 ## Integration
 
-shimmytok is designed for:
-
 ```
-Your Rust App
-     |
-     v
-libshimmy (inference)  <-- or your own inference code
-     |
-     v
-shimmytok (tokenization)
-     |
-     v
-model.gguf (GGUF file)
+Your Rust application
+        │
+        ▼
+libshimmy  (or your inference engine)
+        │
+        ▼
+shimmytok  (this library)
+        │
+        ▼
+ model.gguf
 ```
 
-Primary consumer: [libshimmy](https://github.com/Michael-A-Kuykendall/libshimmy)
-
----
-
-## Version History
-
-| Version | Date | Focus |
-|---------|------|-------|
-| 0.7.1 | Jan 2026 | Code quality, test coverage |
-| 0.7.0 | Jan 2025 | Full llama.cpp parity |
-| 0.6.0 | Jan 2025 | Validation fixes |
-| 0.4.0 | Oct 2024 | Streaming decode |
-| 0.3.0 | Oct 2024 | Multi-model support |
-| 0.2.0 | Oct 2024 | Batch encoding |
-| 0.1.0 | Oct 2024 | Initial release |
+Primary downstream consumer: [libshimmy](https://github.com/Michael-A-Kuykendall/libshimmy)
 
 ---
 
 ## License
 
-MIT OR Apache-2.0
+`MIT OR Apache-2.0`
 
 ## Maintainer
 
-Michael A. Kuykendall
+Michael A. Kuykendall — [@Michael-A-Kuykendall](https://github.com/Michael-A-Kuykendall)

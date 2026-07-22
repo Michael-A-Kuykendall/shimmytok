@@ -2,12 +2,13 @@
 
 ## Supported Versions
 
-We actively support the following versions of shimmytok with security updates:
+We actively support the latest release with security updates. Older minor versions
+receive fixes only for critical issues.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
-| < 0.1   | :x:                |
+| Version | Supported |
+|---------|-----------|
+| 0.7.x   | ✅ Active  |
+| < 0.7   | ❌ EOL    |
 
 ## Reporting a Vulnerability
 
@@ -115,7 +116,7 @@ For critical vulnerabilities that are being actively exploited:
 1. **Dependencies**:
    - Regularly audit and update dependencies
    - Use `cargo audit` to check for known vulnerabilities
-   - Minimize dependency count (currently only thiserror + regex)
+   - Minimize dependency count (currently three: `fancy-regex`, `rayon`, `thiserror`)
 2. **Input Validation**:
    - Validate GGUF file structure before parsing
    - Check array bounds and sizes
@@ -134,7 +135,7 @@ shimmytok includes several built-in security features:
 - **Token Count Limits**: MAX_OUTPUT_TOKENS prevents unbounded allocation
 - **GGUF Validation**: Strict parsing with error handling
 - **No Unsafe Code**: Pure safe Rust implementation
-- **Minimal Dependencies**: Only 2 direct dependencies (thiserror, regex)
+- **Minimal Dependencies**: Three direct dependencies (`fancy-regex`, `rayon`, `thiserror`)
 
 ## Scope
 
