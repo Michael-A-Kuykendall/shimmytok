@@ -23,6 +23,8 @@ const MODEL_QWEN2_05B: &str = "D:/shimmy-test-models/gguf_collection/Qwen/Qwen2-
 const MODEL_GEMMA2_2B: &str =
     "D:/shimmy-test-models/gguf_collection/google/gemma-2-2b-it/gemma-2-2b-it-Q4_K_M.gguf";
 const MODEL_PHI2: &str = "D:/shimmy-test-models/gguf_collection/microsoft/phi-2/phi-2.Q4_K_M.gguf";
+const MODEL_RWKV: &str = "D:/shimmy-test-models/gguf_collection/Mungert/rwkv7-191M-world-GGUF/rwkv7-191M-world-q3_k_s.gguf";
+const MODEL_T5: &str = "D:/shimmy-test-models/gguf_collection/city96/t5-v1_1-xxl-encoder-gguf/t5-v1_1-xxl-encoder-Q3_K_S.gguf";
 
 /// Standard corpus covering ASCII, Unicode, code, punctuation, and CJK.
 const CORPUS: &[&str] = &[
@@ -148,6 +150,18 @@ fn validate_phi2_bpe() {
     validate_model("Phi-2 (BPE/gpt2)", MODEL_PHI2);
 }
 
+#[test]
+#[ignore = "requires local model files — run: cargo test --test test_real_models -- --ignored --nocapture"]
+fn validate_rwkv() {
+    validate_model("RWKV-7-191M-World (RWKV)", MODEL_RWKV);
+}
+
+#[test]
+#[ignore = "requires local model files — run: cargo test --test test_real_models -- --ignored --nocapture"]
+fn validate_t5() {
+    validate_model("T5-v1_1-xxl-encoder (UGM/T5)", MODEL_T5);
+}
+
 // ── smoke tests (no llama-tokenize required) ──────────────────────────────────
 //
 // These also run with --ignored because they load large files from D:,
@@ -162,6 +176,8 @@ fn smoke_load_and_encode_all_models() {
         ("Qwen2-0.5B", MODEL_QWEN2_05B),
         ("Gemma-2-2B", MODEL_GEMMA2_2B),
         ("Phi-2", MODEL_PHI2),
+        ("RWKV-7-191M", MODEL_RWKV),
+        ("T5-xxl-encoder", MODEL_T5),
     ];
 
     let text = "Hello, world! 🦀";

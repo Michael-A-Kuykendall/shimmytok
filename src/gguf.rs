@@ -285,6 +285,8 @@ enum Value {
     StringArray(Vec<String>),
     I32Array(Vec<i32>),
     F32Array(Vec<f32>),
+    #[allow(dead_code)]
+    U8Array(Vec<u8>),
 }
 
 fn read_u32<R: Read>(reader: &mut R) -> Result<u32, Error> {
@@ -365,6 +367,12 @@ fn read_value<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Value,
             let array_len = read_u64(reader)? as usize;
 
             match array_type {
+                0 => {
+                    // U8 array (used for precompiled_charsmap in T5/mT5 models)
+                    let mut buf = vec![0u8; array_len];
+                    reader.read_exact(&mut buf)?;
+                    Ok(Value::U8Array(buf))
+                }
                 7 => {
                     // BOOL array: one byte per boolean in the GGUF wire format.
                     let mut arr = Vec::with_capacity(array_len);

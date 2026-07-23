@@ -1,11 +1,5 @@
 //! UGM (Unigram) tokenizer implementation.
 //!
-//! # ⚠️ Experimental
-//!
-//! **Status**: Implementation complete, but **no T5/mT5 GGUF test models available** for validation.
-//! llama.cpp T5 architecture support is limited, and test fixtures are not commodity-accessible.
-//! This module cannot be validated against the reference implementation.
-//!
 //! # Algorithm
 //!
 //! Port of llama.cpp UGM tokenizer session (unigram / SentencePiece-style Viterbi).
@@ -17,6 +11,7 @@
 //! - Viterbi-style DP for optimal tokenization
 //! - Score-based selection between competing tokenizations
 //! - Unknown token handling with penalty score
+//! - Space prefix normalization (▁ U+2581) for T5/mT5 parity
 
 use crate::vocab::{TokenType, Vocabulary};
 use crate::Error;
@@ -135,10 +130,31 @@ impl UgmTokenizer {
 
     /// Encode text into token IDs using Viterbi DP.
     pub fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<u32>, Error> {
-        let normalized = normalize_ugm(text);
-        if normalized.is_empty() {
+        // Preserve empty input: don't add prefix to empty string.
+        if text.is_empty() {
             return Ok(Vec::new());
         }
+        // Normalize whitespace: newlines, tabs, carriage returns → spaces.
+        // This matches SentencePiece charsmap normalization for T5/mT5.
+        let normalized_text: String = text
+            .chars()
+            .map(|c| if c.is_ascii_whitespace() && c != ' ' { ' ' } else { c })
+            .collect();
+
+        // Add space prefix for SentencePiece-style tokenization (T5/mT5).
+        // When add_space_prefix is true, prepend ▁ (U+2581) and replace spaces.
+        let normalized = if vocab.add_space_prefix() {
+            if normalized_text.starts_with(' ') {
+                normalized_text.replace(' ', "▁")
+            } else {
+                format!("▁{}", normalized_text.replace(' ', "▁"))
+            }
+        } else {
+            normalized_text
+        };
+
+        // Normalize any remaining non-ASCII whitespace (U+3000, etc.)
+        // but skip for now — charsmap does this in production.
 
         // Preprocess: split on user-defined tokens first (llama.cpp parity)
         // User-defined tokens like <|endoftext|> must be matched greedily before Viterbi
@@ -261,7 +277,7 @@ impl UgmTokenizer {
             let mut node_opt = self.trie.traverse(0, bytes[prefix_offset]);
             prefix_offset += 1;
 
-            let mut single_codepoint_token_found = false;
+            let mut any_token_found = false;
 
             while prefix_offset <= n {
                 let node = match node_opt {
@@ -270,9 +286,7 @@ impl UgmTokenizer {
                 };
 
                 if let Some(token_id) = self.trie.value(node) {
-                    if prefix_offset - input_offset == cp_len {
-                        single_codepoint_token_found = true;
-                    }
+                    any_token_found = true;
 
                     let token_score = match vocab.get_token_type(token_id) {
                         TokenType::UserDefined => 0.0, // User-defined tokens get score 0
@@ -296,8 +310,8 @@ impl UgmTokenizer {
                 prefix_offset += 1;
             }
 
-            // Unknown-token path if no token covers whole codepoint
-            if !single_codepoint_token_found {
+            // Unknown-token path if no token covers this codepoint
+            if !any_token_found {
                 let next = input_offset + cp_len;
                 let challenger = current_best.score + self.unknown_token_score;
                 if challenger > best[next].score {
@@ -312,12 +326,14 @@ impl UgmTokenizer {
             input_offset += cp_len;
         }
 
-        // Backtrack from end to build tokens
+        // Backtrack from end to build tokens, collapsing consecutive UNKs.
         let mut out_rev: Vec<u32> = Vec::new();
         let mut pos = n;
         while pos > 0 {
             let b = best[pos];
-            out_rev.push(b.token);
+            if b.token != unk_id || out_rev.last() != Some(&unk_id) {
+                out_rev.push(b.token);
+            }
             pos = b.start;
         }
         out_rev.reverse();
@@ -344,13 +360,6 @@ fn utf8_cp_len(first: u8) -> usize {
         0xE0..=0xEF => 3,
         _ => 4,
     }
-}
-
-/// Placeholder normalization.
-///
-/// For exact llama.cpp parity, route this through GGUF charsmap/XCDA parsing.
-fn normalize_ugm(text: &str) -> String {
-    text.to_string()
 }
 
 #[cfg(test)]

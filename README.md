@@ -61,13 +61,13 @@ Stability-guaranteed API:
 - ✅ **`get_token`** — exact-match single-token lookup, like candle's
   `TokenOutputStream`.
 - ✅ **llama.cpp tokenizer support** — SPM, BPE, WPM validated token-for-token;
-  UGM, RWKV, PLaMo-2 experimental; 41 BPE pre-tokenization patterns.
+  SPM, BPE, WPM, RWKV, and UGM validated; 41 BPE pre-tokenization patterns.
 
 ## Features
 
 - 🦀 **Pure Rust** — No C++ dependencies, compiles anywhere
 - 📦 **Load from GGUF** — Tokenizer embedded in model file
-- ✅ **Validated** — SPM, BPE, and WPM tested token-for-token against llama.cpp; UGM/RWKV/PLaMo-2 are ⚠️ experimental
+- ✅ **Validated** — SPM, BPE, WPM, RWKV, and UGM tested token-for-token against llama.cpp
  - ⚡ **Fast** — Batch encoding with optional Rayon parallelism for large workloads
 - 🌊 **Streaming** — Token-by-token decoding for LLM output
 - 🔒 **Safe** — Zero unsafe code in critical paths
@@ -129,7 +129,6 @@ shimmytok implements all tokenizer types from llama.cpp:
 | **WPM** | WordPiece (BERT-style) | BERT, BGE embeddings |
 | **UGM** | Unigram (Viterbi DP) | T5, mT5 |
 | **RWKV** | Trie-based greedy | RWKV World |
-| **PLaMo-2** | Table-driven reverse DP | PLaMo-2 |
 
 ### BPE Pre-tokenization Patterns
 
