@@ -71,14 +71,12 @@ impl WpmTokenizer {
                 }
 
                 if !matched {
-                    // discard all tokens added for this word
                     out.truncate(checkpoint);
                     break;
                 }
             }
 
             if out.len() == checkpoint {
-                // No tokens matched for this word - emit unk
                 out.push(vocab.unk_token_id());
             }
         }

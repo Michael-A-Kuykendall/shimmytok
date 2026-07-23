@@ -136,7 +136,6 @@ impl TokenizerImpl for SentencePieceTokenizer {
             )));
         }
 
-        // Split text into UTF-8 characters
         let mut symbols = Vec::new();
         let mut char_indices = processed_text.char_indices().peekable();
         let mut index = 0;
@@ -167,7 +166,6 @@ impl TokenizerImpl for SentencePieceTokenizer {
         // Track merge history for resegment
         let mut rev_merge: HashMap<String, (usize, usize)> = HashMap::new();
 
-        // Initialize work queue with all adjacent pairs
         let mut work_queue = BinaryHeap::new();
         for i in 1..symbols.len() {
             try_add_bigram(

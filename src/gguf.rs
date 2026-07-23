@@ -141,10 +141,8 @@ pub fn load_metadata_from_reader<R: Read>(mut reader: R) -> Result<GGUFMetadata,
         };
     }
 
-    // Track total string allocation to prevent OOM (Issue R2#3)
     let mut total_string_bytes: usize = 0;
 
-    // Read magic
     let mut magic = [0u8; 4];
     reader.read_exact(&mut magic)?;
 
@@ -152,20 +150,16 @@ pub fn load_metadata_from_reader<R: Read>(mut reader: R) -> Result<GGUFMetadata,
         return Err(Error::InvalidMetadata("Not a GGUF file".into()));
     }
 
-    // Read version
     let version = read_u32(&mut reader)?;
-    // Support both version 2 and 3 (GPT-2 uses v3)
     if !(2..=3).contains(&version) {
         return Err(Error::InvalidMetadata(format!(
             "Unsupported GGUF version: {version} (only versions 2-3 are supported)"
         )));
     }
 
-    // Read counts
     let _tensor_count = read_u64(&mut reader)?;
     let metadata_count = read_u64(&mut reader)?;
 
-    // Read metadata key-value pairs
     let mut kv_pairs = HashMap::new();
     for _ in 0..metadata_count {
         let key = read_string(&mut reader, &mut total_string_bytes)?;

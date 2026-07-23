@@ -53,7 +53,6 @@ pub fn bytes_to_unicode() -> &'static HashMap<u8, char> {
             }
         }
 
-        // Create the mapping
         let mut result = HashMap::new();
         for (byte_val, &unicode_val) in bs.iter().zip(cs.iter()) {
             result.insert(*byte_val as u8, char::from_u32(unicode_val).unwrap());

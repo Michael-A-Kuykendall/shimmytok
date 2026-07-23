@@ -84,21 +84,17 @@ impl RwkvTokenizer {
         let mut pos = 0usize;
 
         while pos < bs.len() {
-            // First byte must exist in trie
             let mut node = match self.trie.nodes[0].next.get(&bs[pos]).copied() {
                 Some(n) => n,
                 None => {
-                    // Unknown byte - emit unk token
                     out.push(vocab.unk_token_id());
                     pos += 1;
                     continue;
                 }
             };
-
             let mut best_id: u32 = 0;
             let mut best_end: usize = pos;
 
-            // Check if current node has a value
             if let Some(v) = self.trie.nodes[node].value {
                 best_id = v;
                 best_end = pos + 1;
@@ -119,7 +115,6 @@ impl RwkvTokenizer {
                 }
             }
 
-            // Check final node after loop
             if let Some(v) = self.trie.nodes[node].value {
                 if i > best_end {
                     best_id = v;
@@ -131,7 +126,6 @@ impl RwkvTokenizer {
                 out.push(best_id);
                 pos = best_end;
             } else {
-                // No match found, emit unk and advance
                 out.push(vocab.unk_token_id());
                 pos += 1;
             }

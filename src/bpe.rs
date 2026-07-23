@@ -305,7 +305,6 @@ impl BPETokenizer {
             for (start, end) in offsets {
                 let fragment = &text[start..end];
 
-                // Collect all matches in this fragment
                 let matches: Vec<_> = regex
                     .find_iter(fragment)
                     .filter_map(std::result::Result::ok)
@@ -319,17 +318,14 @@ impl BPETokenizer {
                     let mut last_pos = 0;
 
                     for m in matches {
-                        // Add unmatched gap before this match
                         if m.start() > last_pos {
                             new_offsets.push((start + last_pos, start + m.start()));
                         }
 
-                        // Add the match
                         new_offsets.push((start + m.start(), start + m.end()));
                         last_pos = m.end();
                     }
 
-                    // Add final unmatched portion
                     if last_pos < fragment.len() {
                         new_offsets.push((start + last_pos, end));
                     }
@@ -339,7 +335,6 @@ impl BPETokenizer {
             offsets = new_offsets;
         }
 
-        // Convert offsets to strings
         offsets
             .iter()
             .map(|(start, end)| text[*start..*end].to_string())
@@ -368,7 +363,6 @@ impl BPETokenizer {
     /// Direct port of llama.cpp `llm_tokenizer_bpe_session::tokenize` (lines 1040-1118)
     fn bpe_fragment(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
         let merge_ranks = &self.prepared.merge_ranks;
-        // Split into UTF-8 characters as initial symbols
         let char_indices: Vec<(usize, char)> = text.char_indices().collect();
         let mut symbols: Vec<Symbol> = Vec::with_capacity(char_indices.len());
 
@@ -395,7 +389,6 @@ impl BPETokenizer {
             return Ok(Vec::new());
         }
 
-        // Build initial work queue with all adjacent bigrams
         let mut work_queue = BinaryHeap::new();
         for i in 0..symbols.len().saturating_sub(1) {
             if let Some(next) = symbols[i].next {
@@ -403,7 +396,6 @@ impl BPETokenizer {
             }
         }
 
-        // Apply merges in priority order
         while let Some(bigram) = work_queue.pop() {
             let left = bigram.left;
             let right = bigram.right;
@@ -435,11 +427,9 @@ impl BPETokenizer {
 
             if let Some(expected_rank) = rank {
                 if expected_rank == bigram.rank {
-                    // Merge: extend left symbol to include right symbol
                     symbols[left].text_len += symbols[right].text_len;
                     symbols[right].text_len = 0; // Mark right as deleted
 
-                    // Update linked list
                     symbols[left].next = symbols[right].next;
                     if let Some(next) = symbols[right].next {
                         symbols[next].prev = Some(left);
@@ -506,7 +496,6 @@ impl BPETokenizer {
     /// - the pre-tokenization regex fails to compile or match
     /// - the encoded output would exceed [`crate::MAX_OUTPUT_TOKENS`]
     pub fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<TokenId>, crate::Error> {
-        // Validate input size
         if text.len() > crate::MAX_INPUT_SIZE {
             return Err(crate::Error::TokenizationFailed(format!(
                 "Input text too large: {} bytes (max: {})",
@@ -558,7 +547,6 @@ impl BPETokenizer {
     /// vocabulary, or [`crate::Error::TokenizationFailed`] if the decoded output
     /// would exceed 100 MB.
     pub fn decode(&self, tokens: &[TokenId], vocab: &Vocabulary) -> Result<String, crate::Error> {
-        // Validate all token IDs exist
         for &id in tokens {
             if vocab.get_token_text(id).is_none() {
                 return Err(crate::Error::InvalidToken(format!(
@@ -573,7 +561,6 @@ impl BPETokenizer {
             .collect::<Vec<_>>()
             .join("");
 
-        // Convert from GPT-2 byte encoding back to normal UTF-8
         let decoded = crate::byte_encoder::decode_bytes(&byte_encoded_text);
 
         // Validate final decoded size (Issue R3#8) - decoding can expand

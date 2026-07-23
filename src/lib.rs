@@ -584,7 +584,6 @@ impl Tokenizer {
         // tokens are user input that may be invalid. The code below handles
         // invalid tokens by returning Error::InvalidToken.
 
-        // Filter tokens based on options
         let filtered: Vec<TokenId>;
         let filtered_tokens: &[TokenId] = if options.skip_special_tokens {
             filtered = tokens
@@ -602,15 +601,12 @@ impl Tokenizer {
         let mut result = if options.lstrip || !options.include_special_text {
             let mut result = String::new();
             for &token_id in filtered_tokens {
-                // Skip special text if requested
                 if !options.include_special_text && self.vocab.is_special_token(token_id) {
                     continue;
                 }
 
-                // Get the token piece
                 let piece = self.tokenizer_impl.decode(&[token_id], &self.vocab)?;
 
-                // Apply lstrip if requested
                 let piece = if options.lstrip {
                     piece.trim_start().to_string()
                 } else {
@@ -621,7 +617,6 @@ impl Tokenizer {
             }
             result
         } else {
-            // Standard decode path
             self.tokenizer_impl.decode(filtered_tokens, &self.vocab)?
         };
 

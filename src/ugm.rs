@@ -96,7 +96,6 @@ impl UgmTokenizer {
             };
             let ttype = vocab.get_token_type(id);
 
-            // Insert normal, user_defined, unused tokens into trie
             if matches!(
                 ttype,
                 TokenType::Normal | TokenType::UserDefined | TokenType::Unused
@@ -130,7 +129,6 @@ impl UgmTokenizer {
 
     /// Encode text into token IDs using Viterbi DP.
     pub fn encode(&self, text: &str, vocab: &Vocabulary) -> Result<Vec<u32>, Error> {
-        // Preserve empty input: don't add prefix to empty string.
         if text.is_empty() {
             return Ok(Vec::new());
         }
@@ -153,11 +151,8 @@ impl UgmTokenizer {
             normalized_text
         };
 
-        // Normalize any remaining non-ASCII whitespace (U+3000, etc.)
-        // but skip for now — charsmap does this in production.
-
-        // Preprocess: split on user-defined tokens first (llama.cpp parity)
-        // User-defined tokens like <|endoftext|> must be matched greedily before Viterbi
+        // Split on user-defined tokens first (greedy longest match)
+        // so special tokens like <|endoftext|> are handled before Viterbi.
         let fragments = self.split_on_user_defined(&normalized);
 
         let mut result = Vec::new();
@@ -185,7 +180,6 @@ impl UgmTokenizer {
         let mut text_start = 0;
 
         while pos < n {
-            // Try to match a user-defined token at this position
             let mut best_len = 0;
             let mut best_id = None;
 
@@ -212,7 +206,6 @@ impl UgmTokenizer {
             }
 
             if let Some(token_id) = best_id {
-                // Emit any text before this user-defined token
                 if pos > text_start {
                     fragments.push(UgmFragment::Text(text[text_start..pos].to_string()));
                 }

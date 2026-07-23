@@ -75,7 +75,6 @@ impl Plamo2Tokenizer {
             token_to_id.insert(tok.clone(), id);
 
             if matches!(vocab.get_token_type(id), TokenType::Byte) {
-                // Expect "<0xNN>"
                 if tok.len() == 6 && tok.starts_with("<0x") && tok.ends_with('>') {
                     let hex = &tok[3..5];
                     if let Ok(b) = u8::from_str_radix(hex, 16) {
@@ -106,7 +105,6 @@ impl Plamo2Tokenizer {
             }
         }
 
-        // Collect suffixes + "" and sort by reversed string
         let mut suffixes: Vec<String> = suffix_to_score.keys().cloned().collect();
         suffixes.push(String::new());
         suffixes.sort_by(|a, b| {
@@ -115,7 +113,6 @@ impl Plamo2Tokenizer {
             a_rev.cmp(&b_rev)
         });
 
-        // Build suffix_to_id and to_suffix_id mapping
         let mut suffix_to_id: HashMap<String, i32> = HashMap::new();
         let mut to_suffix_id: HashMap<u64, i32> = HashMap::new();
 
@@ -132,7 +129,6 @@ impl Plamo2Tokenizer {
                 to_suffix_id.insert(code, num_pieces);
             }
 
-            // Count prefixes that exist in suffix_to_score
             let mut prefixes = 0i32;
             let chars: Vec<char> = s.chars().collect();
             for i in 1..=chars.len() {
@@ -144,12 +140,10 @@ impl Plamo2Tokenizer {
             num_pieces += 1 + prefixes;
         }
 
-        // Build flattened table
         let mut table: Vec<[i32; 4]> = Vec::with_capacity(num_pieces as usize);
         for suffix in &suffixes {
             let chars: Vec<char> = suffix.chars().collect();
 
-            // Pieces in decreasing length
             for piece_len in (1..=chars.len()).rev() {
                 let piece: String = chars[..piece_len].iter().collect();
                 let score_opt = suffix_to_score.get(&piece).cloned();
@@ -171,7 +165,6 @@ impl Plamo2Tokenizer {
                 table.push([piece_len as i32, token_id, score_i32, piece_id]);
             }
 
-            // Sentinel row
             table.push([1, -1, UNKNOWN_SCORE, 0]);
         }
 
@@ -184,7 +177,6 @@ impl Plamo2Tokenizer {
 
     /// Encode text into token IDs using reverse DP.
     pub fn encode(&self, text: &str, _vocab: &Vocabulary) -> Result<Vec<u32>, Error> {
-        // Convert to Unicode scalar values (code points)
         let data: Vec<u32> = text.chars().map(|c| c as u32).collect();
         let n = data.len();
 
@@ -192,7 +184,6 @@ impl Plamo2Tokenizer {
             return Ok(Vec::new());
         }
 
-        // DP arrays
         let mut scores: Vec<i64> = vec![i64::MAX / 4; n + 1];
         scores[n] = 0;
 
@@ -203,7 +194,6 @@ impl Plamo2Tokenizer {
         for i in (0..n).rev() {
             let c = data[i] as u64;
 
-            // Find next suffix_id
             let mut p = suffix_id as usize;
             while p < self.table.len() {
                 let piece_id = self.table[p][T_PIECE_ID] as u32 as u64;
@@ -217,7 +207,6 @@ impl Plamo2Tokenizer {
                 p += 1;
             }
 
-            // Evaluate candidates from suffix_id forward
             let mut p2 = suffix_id as usize;
             while p2 < self.table.len() {
                 let score_i32 = self.table[p2][T_SCORE];
@@ -256,7 +245,6 @@ impl Plamo2Tokenizer {
             }
         }
 
-        // Decode best path forward
         let mut out: Vec<u32> = Vec::with_capacity(path[0][P_NUM_TOKENS] as usize);
         let mut pos = 0usize;
 
@@ -285,7 +273,6 @@ impl Plamo2Tokenizer {
     ///
     /// Note: Full decode implementation requires mapping BYTE tokens back to bytes.
     pub fn decode(&self, tokens: &[u32], vocab: &Vocabulary) -> Result<String, Error> {
-        // Build reverse mapping for byte tokens
         let mut byte_to_token: HashMap<u32, u8> = HashMap::new();
         for (b, &tid) in self.byte_token.iter().enumerate() {
             byte_to_token.insert(tid, b as u8);

@@ -120,7 +120,6 @@ impl Vocabulary {
 
         let num_tokens = metadata.tokens.len();
 
-        // Validate vocab size
         if num_tokens == 0 {
             return Err(Error::VocabularyError("Vocabulary is empty".to_string()));
         }
@@ -130,7 +129,6 @@ impl Vocabulary {
             )));
         }
 
-        // Validate token lengths
         for (i, token) in metadata.tokens.iter().enumerate() {
             if token.len() > MAX_TOKEN_LENGTH {
                 return Err(Error::VocabularyError(format!(
@@ -148,7 +146,6 @@ impl Vocabulary {
             token_to_id.insert(s.clone(), i as TokenId);
         }
 
-        // Validate no duplicate tokens
         if token_to_id.len() != num_tokens {
             return Err(Error::VocabularyError(format!(
                 "Duplicate tokens found: {} unique out of {} total",
@@ -320,7 +317,6 @@ impl Vocabulary {
             return *id;
         }
 
-        // Fall back to raw byte as string
         let byte_str = String::from_utf8_lossy(&[byte]).to_string();
         self.token_to_id
             .get(&byte_str)
@@ -349,7 +345,6 @@ impl Vocabulary {
     pub fn special_token_map(&self) -> HashMap<String, TokenId> {
         let mut map = HashMap::new();
 
-        // Add known special token IDs
         let special_ids: Vec<Option<TokenId>> = vec![
             Some(self.bos_token_id),
             Some(self.eos_token_id),
@@ -371,7 +366,6 @@ impl Vocabulary {
             }
         }
 
-        // Also add all Control-type tokens
         for (id, token_type) in self.token_types.iter().enumerate() {
             if *token_type == TokenType::Control {
                 if let Some(text) = self.get_token_text(id as TokenId) {
