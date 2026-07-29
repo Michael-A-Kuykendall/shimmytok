@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-07-29
+
+### Added
+
+- **gemma4 and gemma6 architecture support** — `gemma4` and `gemma6` model types now
+  recognized as SentencePiece-based tokenizers (same as `gemma`/`gemma2`). Enables
+  tokenizer loading for Google Gemma 4 family models.
+
 ## [0.8.0] - 2026-07-22
 
 ### Changed
