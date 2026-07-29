@@ -351,7 +351,9 @@ impl Tokenizer {
     fn from_vocab(vocab: Vocabulary) -> Result<Self, Error> {
         let tokenizer_impl: Box<dyn TokenizerImpl> = match vocab.model_type() {
             // SentencePiece models
-            "llama" | "mistral" | "gemma" => Box::new(sentencepiece::SentencePieceTokenizer::new()),
+            "llama" | "mistral" | "gemma" | "gemma4" | "gemma6" => {
+                Box::new(sentencepiece::SentencePieceTokenizer::new())
+            }
             // BPE models
             "gpt2" | "qwen" | "qwen2" => Box::new(bpe::BPETokenizer::new(&vocab)?),
             // WPM (WordPiece) models — BERT-style
