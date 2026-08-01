@@ -267,6 +267,10 @@ pub fn load_metadata_from_reader<R: Read>(mut reader: R) -> Result<GGUFMetadata,
 /// Unrecognised type IDs return [`Error::InvalidMetadata`].
 #[derive(Debug)]
 enum Value {
+    U8(u8),
+    I8(i8),
+    U16(u16),
+    I16(i16),
     U32(u32),
     #[allow(dead_code)] // read via pattern-match in read_value; Debug confuses the lint
     I32(i32),
@@ -281,6 +285,30 @@ enum Value {
     F32Array(Vec<f32>),
     #[allow(dead_code)]
     U8Array(Vec<u8>),
+}
+
+fn read_u8<R: Read>(reader: &mut R) -> Result<u8, Error> {
+    let mut buf = [0u8; 1];
+    reader.read_exact(&mut buf)?;
+    Ok(buf[0])
+}
+
+fn read_i8<R: Read>(reader: &mut R) -> Result<i8, Error> {
+    let mut buf = [0u8; 1];
+    reader.read_exact(&mut buf)?;
+    Ok(buf[0] as i8)
+}
+
+fn read_u16<R: Read>(reader: &mut R) -> Result<u16, Error> {
+    let mut buf = [0u8; 2];
+    reader.read_exact(&mut buf)?;
+    Ok(u16::from_le_bytes(buf))
+}
+
+fn read_i16<R: Read>(reader: &mut R) -> Result<i16, Error> {
+    let mut buf = [0u8; 2];
+    reader.read_exact(&mut buf)?;
+    Ok(i16::from_le_bytes(buf))
 }
 
 fn read_u32<R: Read>(reader: &mut R) -> Result<u32, Error> {
@@ -346,6 +374,10 @@ fn read_value<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Value,
     let type_id = read_u32(reader)?;
 
     match type_id {
+        0 => Ok(Value::U8(read_u8(reader)?)),
+        1 => Ok(Value::I8(read_i8(reader)?)),
+        2 => Ok(Value::U16(read_u16(reader)?)),
+        3 => Ok(Value::I16(read_i16(reader)?)),
         4 => Ok(Value::U32(read_u32(reader)?)),
         5 => Ok(Value::I32(read_i32(reader)?)),
         6 => Ok(Value::F32(read_f32(reader)?)),
