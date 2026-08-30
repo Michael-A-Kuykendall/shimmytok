@@ -17,7 +17,6 @@ Thank you to all our sponsors who help keep shimmytok free forever!
 *Be the first!*
 
 ### Coffee tier ($5+/month)
-- **** (高庆丰)
 - alistairheath
 
 ## Why Sponsor?
