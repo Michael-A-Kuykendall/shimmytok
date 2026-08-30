@@ -29,7 +29,7 @@
 
 [**🎯 Become a Sponsor**](https://github.com/sponsors/Michael-A-Kuykendall) | See our amazing [sponsors](SPONSORS.md) 🙏
 
-**Thank you to our sponsors:** [ZephyrCloudIO](https://github.com/ZephyrCloudIO) (Corporate backer) · [gqf2008](https://github.com/gqf2008) (Coffee tier) · alistairheath (Coffee tier)
+**Thank you to our sponsors:** [ZephyrCloudIO](https://github.com/ZephyrCloudIO) (Corporate backer) · alistairheath (Coffee tier)
 
 ---
 
