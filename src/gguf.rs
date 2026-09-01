@@ -360,6 +360,16 @@ fn read_value<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Value,
             let array_type = read_u32(reader)?;
             let array_len = read_u64(reader)? as usize;
 
+            // array_len is attacker-controlled; a small header can request a
+            // multi-gigabyte allocation (e.g. `vec![0u8; array_len]`). Cap it so
+            // a malformed file can't OOM the process before any data is read.
+            const MAX_ARRAY_LEN: usize = 64 * 1024 * 1024;
+            if array_len > MAX_ARRAY_LEN {
+                return Err(Error::InvalidMetadata(format!(
+                    "Array too large: {array_len} elements (max: {MAX_ARRAY_LEN})"
+                )));
+            }
+
             match array_type {
                 0 => {
                     // U8 array (used for precompiled_charsmap in T5/mT5 models)
@@ -409,5 +419,48 @@ fn read_value<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Value,
         _ => Err(Error::InvalidMetadata(format!(
             "Unsupported value type: {type_id}"
         ))),
+    }
+}
+
+#[cfg(test)]
+mod dos_tests {
+    use super::load_metadata_from_reader;
+    use std::io::Cursor;
+
+    fn wu32(b: &mut Vec<u8>, v: u32) {
+        b.extend_from_slice(&v.to_le_bytes());
+    }
+    fn wu64(b: &mut Vec<u8>, v: u64) {
+        b.extend_from_slice(&v.to_le_bytes());
+    }
+    fn wstr(b: &mut Vec<u8>, s: &str) {
+        wu64(b, s.len() as u64);
+        b.extend_from_slice(s.as_bytes());
+    }
+
+    /// A metadata array declares its element count as an untrusted u64. Before
+    /// the fix, every array branch allocated that many elements up front
+    /// (`vec![0u8; array_len]` / `Vec::with_capacity(array_len)`), so a ~50-byte
+    /// file could request gigabytes and abort the process. It must return an
+    /// error instead.
+    #[test]
+    fn oversized_metadata_array_is_rejected_not_allocated() {
+        // array element type 0 = U8, which hits `vec![0u8; array_len]`.
+        for elem_type in [0u32, 5, 6, 7, 8] {
+            let mut b = Vec::new();
+            b.extend_from_slice(b"GGUF");
+            wu32(&mut b, 3); // version
+            wu64(&mut b, 0); // tensor_count
+            wu64(&mut b, 1); // metadata_count
+            wstr(&mut b, "x"); // key
+            wu32(&mut b, 9); // value type = array
+            wu32(&mut b, elem_type); // element type
+            wu64(&mut b, 5_000_000_000); // array_len (~5e9)
+            let res = load_metadata_from_reader(Cursor::new(b));
+            assert!(
+                res.is_err(),
+                "array elem_type {elem_type} with huge length must error"
+            );
+        }
     }
 }
