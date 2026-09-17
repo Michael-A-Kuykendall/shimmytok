@@ -27,6 +27,24 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
 
+/// A typed value preserved from a GGUF metadata key-value pair.
+#[derive(Debug, Clone, PartialEq)]
+pub enum GGUFValue {
+    U8(u8),
+    I8(i8),
+    U16(u16),
+    I16(i16),
+    U32(u32),
+    I32(i32),
+    U64(u64),
+    I64(i64),
+    F32(f32),
+    F64(f64),
+    Bool(bool),
+    String(String),
+    Array(Vec<Self>),
+}
+
 /// Special token IDs loaded from GGUF metadata.
 ///
 /// Groups the full set of llama.cpp special tokens so they can be passed
@@ -95,6 +113,16 @@ pub struct GGUFMetadata {
     pub special: SpecialTokenIds,
     pub flags: TokenizationFlags,
     pub merges: Option<Vec<(String, String)>>,
+    /// All metadata values, including keys not used by the tokenizer.
+    metadata: HashMap<String, GGUFValue>,
+}
+
+impl GGUFMetadata {
+    /// Returns all GGUF metadata values as a read-only map.
+    #[must_use]
+    pub fn metadata(&self) -> &HashMap<String, GGUFValue> {
+        &self.metadata
+    }
 }
 
 /// Loads tokenizer metadata from a GGUF file at the given path.
@@ -166,6 +194,11 @@ pub fn load_metadata_from_reader<R: Read>(mut reader: R) -> Result<GGUFMetadata,
         let value = read_value(&mut reader, &mut total_string_bytes)?;
         kv_pairs.insert(key, value);
     }
+
+    let metadata = kv_pairs
+        .iter()
+        .map(|(key, value)| (key.clone(), value.clone().into()))
+        .collect();
 
     // Extract tokenizer metadata
     let tokens = match kv_pairs.get("tokenizer.ggml.tokens") {
@@ -258,6 +291,7 @@ pub fn load_metadata_from_reader<R: Read>(mut reader: R) -> Result<GGUFMetadata,
         special,
         flags,
         merges,
+        metadata,
     })
 }
 
@@ -265,13 +299,16 @@ pub fn load_metadata_from_reader<R: Read>(mut reader: R) -> Result<GGUFMetadata,
 ///
 /// Only the variants needed to reconstruct a tokenizer are surfaced here.
 /// Unrecognised type IDs return [`Error::InvalidMetadata`].
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Value {
     U8(u8),
     I8(i8),
     U16(u16),
     I16(i16),
     U32(u32),
+    U64(u64),
+    I64(i64),
+    F64(f64),
     #[allow(dead_code)] // read via pattern-match in read_value; Debug confuses the lint
     I32(i32),
     #[allow(dead_code)] // read via pattern-match in read_value; Debug confuses the lint
@@ -283,8 +320,36 @@ enum Value {
     StringArray(Vec<String>),
     I32Array(Vec<i32>),
     F32Array(Vec<f32>),
+    Array(Vec<Value>),
     #[allow(dead_code)]
     U8Array(Vec<u8>),
+}
+
+impl From<Value> for GGUFValue {
+    fn from(value: Value) -> Self {
+        match value {
+            Value::U8(value) => Self::U8(value),
+            Value::I8(value) => Self::I8(value),
+            Value::U16(value) => Self::U16(value),
+            Value::I16(value) => Self::I16(value),
+            Value::U32(value) => Self::U32(value),
+            Value::I32(value) => Self::I32(value),
+            Value::U64(value) => Self::U64(value),
+            Value::I64(value) => Self::I64(value),
+            Value::F32(value) => Self::F32(value),
+            Value::F64(value) => Self::F64(value),
+            Value::Bool(value) => Self::Bool(value),
+            Value::String(value) => Self::String(value),
+            Value::Array(values) => Self::Array(values.into_iter().map(Self::from).collect()),
+            Value::BoolArray(values) => Self::Array(values.into_iter().map(Self::Bool).collect()),
+            Value::StringArray(values) => {
+                Self::Array(values.into_iter().map(Self::String).collect())
+            }
+            Value::I32Array(values) => Self::Array(values.into_iter().map(Self::I32).collect()),
+            Value::F32Array(values) => Self::Array(values.into_iter().map(Self::F32).collect()),
+            Value::U8Array(values) => Self::Array(values.into_iter().map(Self::U8).collect()),
+        }
+    }
 }
 
 fn read_u8<R: Read>(reader: &mut R) -> Result<u8, Error> {
@@ -323,6 +388,12 @@ fn read_u64<R: Read>(reader: &mut R) -> Result<u64, Error> {
     Ok(u64::from_le_bytes(buf))
 }
 
+fn read_i64<R: Read>(reader: &mut R) -> Result<i64, Error> {
+    let mut buf = [0u8; 8];
+    reader.read_exact(&mut buf)?;
+    Ok(i64::from_le_bytes(buf))
+}
+
 fn read_i32<R: Read>(reader: &mut R) -> Result<i32, Error> {
     let mut buf = [0u8; 4];
     reader.read_exact(&mut buf)?;
@@ -333,6 +404,12 @@ fn read_f32<R: Read>(reader: &mut R) -> Result<f32, Error> {
     let mut buf = [0u8; 4];
     reader.read_exact(&mut buf)?;
     Ok(f32::from_le_bytes(buf))
+}
+
+fn read_f64<R: Read>(reader: &mut R) -> Result<f64, Error> {
+    let mut buf = [0u8; 8];
+    reader.read_exact(&mut buf)?;
+    Ok(f64::from_le_bytes(buf))
 }
 
 fn read_string<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<String, Error> {
@@ -372,7 +449,14 @@ fn read_string<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Strin
 
 fn read_value<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Value, Error> {
     let type_id = read_u32(reader)?;
+    read_value_payload(type_id, reader, total_bytes)
+}
 
+fn read_value_payload<R: Read>(
+    type_id: u32,
+    reader: &mut R,
+    total_bytes: &mut usize,
+) -> Result<Value, Error> {
     match type_id {
         0 => Ok(Value::U8(read_u8(reader)?)),
         1 => Ok(Value::I8(read_i8(reader)?)),
@@ -388,56 +472,72 @@ fn read_value<R: Read>(reader: &mut R, total_bytes: &mut usize) -> Result<Value,
         }
         8 => Ok(Value::String(read_string(reader, total_bytes)?)),
         9 => {
-            // Array
             let array_type = read_u32(reader)?;
-            let array_len = read_u64(reader)? as usize;
-
+            const MAX_ARRAY_LENGTH: usize = 10_000_000;
+            let array_len = usize::try_from(read_u64(reader)?).map_err(|_| {
+                Error::InvalidMetadata("Array length exceeds platform limit".into())
+            })?;
+            if array_len > MAX_ARRAY_LENGTH {
+                return Err(Error::InvalidMetadata(format!(
+                    "Array too large: {array_len} elements (max: {MAX_ARRAY_LENGTH})"
+                )));
+            }
+            let mut values = Vec::with_capacity(array_len);
+            for _ in 0..array_len {
+                values.push(read_value_payload(array_type, reader, total_bytes)?);
+            }
             match array_type {
-                0 => {
-                    // U8 array (used for precompiled_charsmap in T5/mT5 models)
-                    let mut buf = vec![0u8; array_len];
-                    reader.read_exact(&mut buf)?;
-                    Ok(Value::U8Array(buf))
-                }
-                7 => {
-                    // BOOL array: one byte per boolean in the GGUF wire format.
-                    let mut arr = Vec::with_capacity(array_len);
-                    for _ in 0..array_len {
-                        let mut byte = [0u8; 1];
-                        reader.read_exact(&mut byte)?;
-                        arr.push(byte[0] != 0);
-                    }
-                    Ok(Value::BoolArray(arr))
-                }
-                5 => {
-                    // I32 array
-                    let mut arr = Vec::with_capacity(array_len);
-                    for _ in 0..array_len {
-                        arr.push(read_i32(reader)?);
-                    }
-                    Ok(Value::I32Array(arr))
-                }
-                6 => {
-                    // F32 array
-                    let mut arr = Vec::with_capacity(array_len);
-                    for _ in 0..array_len {
-                        arr.push(read_f32(reader)?);
-                    }
-                    Ok(Value::F32Array(arr))
-                }
-                8 => {
-                    // String array
-                    let mut arr = Vec::with_capacity(array_len);
-                    for _ in 0..array_len {
-                        arr.push(read_string(reader, total_bytes)?);
-                    }
-                    Ok(Value::StringArray(arr))
-                }
-                _ => Err(Error::InvalidMetadata(format!(
-                    "Unsupported array type: {array_type}"
-                ))),
+                0 => Ok(Value::U8Array(
+                    values
+                        .into_iter()
+                        .map(|value| match value {
+                            Value::U8(value) => value,
+                            _ => unreachable!(),
+                        })
+                        .collect(),
+                )),
+                5 => Ok(Value::I32Array(
+                    values
+                        .into_iter()
+                        .map(|value| match value {
+                            Value::I32(value) => value,
+                            _ => unreachable!(),
+                        })
+                        .collect(),
+                )),
+                6 => Ok(Value::F32Array(
+                    values
+                        .into_iter()
+                        .map(|value| match value {
+                            Value::F32(value) => value,
+                            _ => unreachable!(),
+                        })
+                        .collect(),
+                )),
+                7 => Ok(Value::BoolArray(
+                    values
+                        .into_iter()
+                        .map(|value| match value {
+                            Value::Bool(value) => value,
+                            _ => unreachable!(),
+                        })
+                        .collect(),
+                )),
+                8 => Ok(Value::StringArray(
+                    values
+                        .into_iter()
+                        .map(|value| match value {
+                            Value::String(value) => value,
+                            _ => unreachable!(),
+                        })
+                        .collect(),
+                )),
+                _ => Ok(Value::Array(values)),
             }
         }
+        10 => Ok(Value::U64(read_u64(reader)?)),
+        11 => Ok(Value::I64(read_i64(reader)?)),
+        12 => Ok(Value::F64(read_f64(reader)?)),
         _ => Err(Error::InvalidMetadata(format!(
             "Unsupported value type: {type_id}"
         ))),

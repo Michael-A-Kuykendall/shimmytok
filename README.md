@@ -46,6 +46,16 @@ When you download a GGUF model, the tokenizer is embedded inside. Most Rust proj
 
 **shimmytok extracts and runs the tokenizer directly from your GGUF file**, producing identical output to llama.cpp.
 
+## 🎯 Current Highlights
+
+The current unreleased changes add generic multimodal-token plumbing without
+adding model-specific behavior:
+
+- ✅ **External special-token mappings** — opt-in marker-to-token mappings can
+  be supplied per encode operation without mutating shared tokenizer state.
+- ✅ **Preserved GGUF metadata** — model-specific scalar, string, and array
+  values are available through a read-only typed metadata map.
+
 ## 🎯 v0.8.0 Highlights
 
 This release makes the batch engine **portable and deterministic** without breaking any
@@ -160,6 +170,24 @@ let text = tokenizer.decode(&tokens, true)?;    // true = skip special tokens
 let piece = tokenizer.decode_single(token_id, false)?;
 ```
 
+### External Special Tokens
+
+External markers are parsed only when `parse_special` is enabled. The supplied
+IDs must be in the tokenizer vocabulary; built-in-marker collisions and duplicate
+external markers are rejected.
+
+```rust
+use shimmytok::{EncodeOptions, SpecialTokenOverride};
+
+let options = EncodeOptions::with_parse_special(true, true);
+let overrides = [SpecialTokenOverride::new("<image>", image_token_id)];
+let tokens = tokenizer.encode_with_external_special_tokens(
+    "Describe <image>",
+    &options,
+    &overrides,
+)?;
+```
+
 ### Metadata
 
 ```rust
@@ -168,6 +196,7 @@ tokenizer.bos_token()     // → TokenId
 tokenizer.eos_token()     // → TokenId
 tokenizer.model_type()    // → &str ("llama", "gpt2", etc.)
 tokenizer.pre_type()      // → Option<&str> (pre-tokenization pattern)
+tokenizer.metadata()      // → &HashMap<String, GGUFValue>
 ```
 
 ### Batch & Advanced

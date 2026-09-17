@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Opt-in external special-token encoding** — `Tokenizer::encode_with_external_special_tokens`
+  accepts caller-owned marker-to-token mappings without mutating shared tokenizer state.
+  Built-in collisions, duplicate markers, empty markers, and out-of-range IDs are rejected.
+- **Preserved GGUF metadata** — `Tokenizer::metadata` exposes read-only typed values for
+  model-specific scalar and array metadata keys.
+
+### Changed
+
+- Existing encoding APIs retain their behavior when no external mappings are supplied.
+- GGUF metadata parsing now accepts and preserves the complete scalar type set and
+  typed arrays, with bounded array allocation for malformed input.
+- Added `Error::InvalidSpecialToken` for deterministic external mapping validation failures.
+
 ## [0.8.1] - 2026-07-29
 
 ### Added

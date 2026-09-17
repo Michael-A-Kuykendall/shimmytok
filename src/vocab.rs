@@ -18,7 +18,7 @@
 //! - `<unk>`: Unknown token fallback
 //! - Model-specific tokens via metadata
 
-use crate::{Error, TokenId};
+use crate::{gguf::GGUFValue, Error, TokenId};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -72,6 +72,7 @@ pub struct Vocabulary {
     pre_type: String,
     /// Raw Jinja2 chat template string from the GGUF file, if present.
     chat_template: Option<String>,
+    metadata: HashMap<String, GGUFValue>,
 
     // Special tokens
     bos_token_id: TokenId,
@@ -119,6 +120,7 @@ impl Vocabulary {
         const MAX_TOKEN_LENGTH: usize = 1024; // 1KB per token max
 
         let num_tokens = metadata.tokens.len();
+        let preserved_metadata = metadata.metadata().clone();
 
         if num_tokens == 0 {
             return Err(Error::VocabularyError("Vocabulary is empty".to_string()));
@@ -212,6 +214,7 @@ impl Vocabulary {
             model_type: metadata.model_type,
             pre_type: metadata.pre_type.unwrap_or_else(|| "default".to_string()),
             chat_template: metadata.chat_template,
+            metadata: preserved_metadata,
 
             bos_token_id: metadata.special.bos.unwrap_or(1),
             eos_token_id: metadata.special.eos.unwrap_or(2),
@@ -252,6 +255,12 @@ impl Vocabulary {
     #[must_use]
     pub fn chat_template(&self) -> Option<&str> {
         self.chat_template.as_deref()
+    }
+
+    /// Returns all GGUF metadata values as a read-only map.
+    #[must_use]
+    pub fn metadata(&self) -> &HashMap<String, GGUFValue> {
+        &self.metadata
     }
 
     #[must_use]

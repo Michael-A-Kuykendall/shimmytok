@@ -59,6 +59,7 @@
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
+use std::collections::{HashMap, HashSet};
 use std::io::{Cursor, Read};
 use std::path::Path;
 
@@ -73,6 +74,7 @@ pub mod ugm;
 pub mod vocab;
 pub mod wpm;
 
+pub use gguf::GGUFValue;
 pub use plamo2::Plamo2Tokenizer;
 pub use rwkv::RwkvTokenizer;
 pub use ugm::UgmTokenizer;
@@ -163,6 +165,26 @@ impl EncodeOptions {
         Self {
             add_special_tokens,
             parse_special,
+        }
+    }
+}
+
+/// An application-defined special token used by an opt-in encode operation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpecialTokenOverride {
+    /// Marker text to recognize in the input.
+    pub text: String,
+    /// Vocabulary token ID to emit for the marker.
+    pub id: TokenId,
+}
+
+impl SpecialTokenOverride {
+    /// Creates an external special-token mapping.
+    #[must_use]
+    pub fn new(text: impl Into<String>, id: TokenId) -> Self {
+        Self {
+            text: text.into(),
+            id,
         }
     }
 }
@@ -417,6 +439,12 @@ impl Tokenizer {
         self.vocab.chat_template()
     }
 
+    /// Get all metadata values preserved from the GGUF file.
+    #[must_use]
+    pub fn metadata(&self) -> &HashMap<String, GGUFValue> {
+        self.vocab.metadata()
+    }
+
     /// Encode text into a sequence of token IDs
     ///
     /// # Arguments
@@ -479,6 +507,56 @@ impl Tokenizer {
         text: &str,
         options: &EncodeOptions,
     ) -> Result<Vec<TokenId>, Error> {
+        self.encode_with_special_map(text, options, None)
+    }
+
+    /// Encode text while recognizing caller-supplied special-token markers.
+    ///
+    /// External markers are opt-in and are only parsed when
+    /// `options.parse_special` is true. Marker IDs must refer to this
+    /// tokenizer's vocabulary. External markers cannot duplicate built-in
+    /// markers or each other.
+    #[must_use = "encode_with_external_special_tokens returns a Result that must be handled"]
+    pub fn encode_with_external_special_tokens(
+        &self,
+        text: &str,
+        options: &EncodeOptions,
+        overrides: &[SpecialTokenOverride],
+    ) -> Result<Vec<TokenId>, Error> {
+        let mut map = self.vocab.special_token_map();
+        let mut external_texts = HashSet::with_capacity(overrides.len());
+
+        for override_token in overrides {
+            if override_token.text.is_empty() || override_token.id as usize >= self.vocab_size() {
+                return Err(Error::InvalidSpecialToken(format!(
+                    "External special token {:?} has invalid text or ID {}",
+                    override_token.text, override_token.id
+                )));
+            }
+            if !external_texts.insert(override_token.text.as_str()) {
+                return Err(Error::InvalidSpecialToken(format!(
+                    "Duplicate external special token {:?}",
+                    override_token.text
+                )));
+            }
+            if map.contains_key(&override_token.text) {
+                return Err(Error::InvalidSpecialToken(format!(
+                    "External special token {:?} collides with a built-in token",
+                    override_token.text
+                )));
+            }
+            map.insert(override_token.text.clone(), override_token.id);
+        }
+
+        self.encode_with_special_map(text, options, Some(&map))
+    }
+
+    fn encode_with_special_map(
+        &self,
+        text: &str,
+        options: &EncodeOptions,
+        special_map: Option<&HashMap<String, TokenId>>,
+    ) -> Result<Vec<TokenId>, Error> {
         let mut tokens = Vec::new();
 
         if options.add_special_tokens && self.vocab.add_bos_token() {
@@ -486,35 +564,35 @@ impl Tokenizer {
         }
 
         if options.parse_special {
-            // Build special token map and find occurrences in text
-            let special_map = self.vocab.special_token_map();
-            let fragments = split_on_special_tokens(text, &special_map);
+            let owned_map;
+            let special_map = match special_map {
+                Some(map) => map,
+                None => {
+                    owned_map = self.vocab.special_token_map();
+                    &owned_map
+                }
+            };
+            let fragments = split_on_special_tokens(text, special_map);
 
             for fragment in fragments {
                 match fragment {
-                    TextFragment::Special(token_id) => {
-                        tokens.push(token_id);
-                    }
+                    TextFragment::Special(token_id) => tokens.push(token_id),
                     TextFragment::Text(t) => {
                         if !t.is_empty() {
-                            let encoded = self.tokenizer_impl.encode(&t, &self.vocab)?;
-                            tokens.extend(encoded);
+                            tokens.extend(self.tokenizer_impl.encode(&t, &self.vocab)?);
                         }
                     }
                 }
             }
         } else {
-            let encoded = self.tokenizer_impl.encode(text, &self.vocab)?;
-            tokens.extend(encoded);
+            tokens.extend(self.tokenizer_impl.encode(text, &self.vocab)?);
         }
 
         if options.add_special_tokens && self.vocab.add_eos_token() {
             tokens.push(self.vocab.eos_token_id());
         }
 
-        // Verify postconditions in debug builds
         invariants::assert_encode_postconditions(&tokens, self.vocab_size());
-
         Ok(tokens)
     }
 
@@ -1098,6 +1176,9 @@ pub enum Error {
 
     #[error("Invalid token: {0}")]
     InvalidToken(String),
+
+    #[error("Invalid special token: {0}")]
+    InvalidSpecialToken(String),
 
     #[error("Vocabulary error: {0}")]
     VocabularyError(String),

@@ -37,6 +37,8 @@ use shimmytok::{EncodeOptions, Tokenizer};
 | `tokenizer.decode_single` | `(token: TokenId, skip_special: bool) -> Result<String, Error>` | **Stable** |
 | `tokenizer.eos_token` | `() -> TokenId` | **Stable** |
 | `EncodeOptions::with_parse_special` | `(add_special: bool, parse_special: bool) -> EncodeOptions` | **Stable** |
+| `Tokenizer::encode_with_external_special_tokens` | `(text, options, overrides) -> Result<Vec<TokenId>, Error>` | **Committed** |
+| `Tokenizer::metadata` | `() -> &HashMap<String, GGUFValue>` | **Committed** |
 
 ### Types used
 
@@ -45,6 +47,8 @@ use shimmytok::{EncodeOptions, Tokenizer};
 | `Tokenizer` | **Stable** — opaque struct, `Send + Sync` (verified by a compile-time assertion in the test suite) |
 | `TokenId` (`u32`) | **Stable** — type alias, will not change underlying type |
 | `EncodeOptions` | **Stable** — fields are public but construct via the named constructors |
+| `SpecialTokenOverride` | **Committed** — caller-owned marker-to-token mapping for opt-in encoding |
+| `GGUFValue` | **Committed** — typed, read-only representation of preserved GGUF metadata |
 | `Error` | **Committed** — `#[non_exhaustive]`; always match with a `_` arm |
 
 ---
@@ -65,6 +69,21 @@ signature. Whether a batch runs in parallel is an internal, measured decision
 controlled by the `parallel` feature and a data-backed size threshold.
 
 ---
+
+## External Special-Token Contract
+
+`Tokenizer::encode_with_external_special_tokens` is an additive, per-call API.
+It preserves the existing `EncodeOptions` layout and does not mutate shared
+`Tokenizer` state.
+
+- External markers are parsed only when `EncodeOptions::parse_special` is true.
+- Marker IDs must be less than `Tokenizer::vocab_size()`.
+- Empty marker text, duplicate marker text, and collisions with built-in special
+  markers return `Error::InvalidSpecialToken`.
+- Marker order follows the input text; BOS/EOS behavior remains controlled only
+  by `EncodeOptions::add_special_tokens` and the GGUF flags.
+- `Tokenizer::metadata()` returns a read-only map of all parsed GGUF metadata,
+  including model-specific scalar and array values represented by `GGUFValue`.
 
 ## Feature flags
 

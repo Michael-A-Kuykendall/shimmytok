@@ -136,7 +136,13 @@ impl UgmTokenizer {
         // This matches SentencePiece charsmap normalization for T5/mT5.
         let normalized_text: String = text
             .chars()
-            .map(|c| if c.is_ascii_whitespace() && c != ' ' { ' ' } else { c })
+            .map(|c| {
+                if c.is_ascii_whitespace() && c != ' ' {
+                    ' '
+                } else {
+                    c
+                }
+            })
             .collect();
 
         // Add space prefix for SentencePiece-style tokenization (T5/mT5).
