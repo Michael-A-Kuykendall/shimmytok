@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-09-17
+
 ### Added
 
 - **Opt-in external special-token encoding** — `Tokenizer::encode_with_external_special_tokens`
@@ -314,7 +316,8 @@ Initial release.
 - Comprehensive error handling via `thiserror`.
 - 30 tests with 100 % llama.cpp match on LLaMA, Llama-2, Llama-3, Phi-3, GPT-2.
 
-[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.8.3...HEAD
+[0.8.3]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.8.1...v0.8.3
 [0.8.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.4...v0.8.0
 [0.7.4]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.2...v0.7.3

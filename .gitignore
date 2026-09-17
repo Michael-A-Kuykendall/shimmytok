@@ -18,3 +18,4 @@ AGENTS.md
 .cache/
 __pycache__/
 .aider*
+.openstate/
