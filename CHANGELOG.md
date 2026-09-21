@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-09-20
+
+### Fixed
+
+- **`add_bos_token` default is now tokenizer-type-aware** — when a GGUF file omits
+  `tokenizer.ggml.add_bos_token`, the default is `true` only for SentencePiece
+  tokenizers (`llama`, `mistral`, `gemma`, `gemma4`, `gemma6`) and `false` for
+  BPE/WPM families (`gpt2`, `qwen`, `qwen2`, …), matching llama.cpp. An explicit
+  key in the GGUF always wins. Previously the unconditional `true` default
+  poisoned prompts for models like Qwen2 and MiniCPM-V 2.6, which omit the key;
+  for MiniCPM (whose BOS id equals `<|im_start|>`) this duplicated the chat
+  template opener and collapsed generation. `TokenizationFlags::default()`
+  (non-GGUF construction) is unchanged and keeps `add_bos_token: true`.
+- Added `tests/test_bos_default.rs` covering the type-aware default with
+  synthetic GGUF fixtures and real MiniCPM-V 2.6, TinyLlama, and Qwen2 models.
+
 ## [0.8.3] - 2026-09-17
 
 ### Added

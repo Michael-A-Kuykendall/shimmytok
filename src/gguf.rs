@@ -252,9 +252,18 @@ pub fn load_metadata_from_reader<R: Read>(mut reader: R) -> Result<GGUFMetadata,
         mask: kv_u32!(kv_pairs, "tokenizer.ggml.mask_token_id"),
     };
 
-    // Tokenization flags — fall back to llama.cpp defaults when absent
+    // Tokenization flags — fall back to llama.cpp defaults when absent.
+    // llama.cpp's add_bos_token default is true only for SentencePiece
+    // tokenizers (llama/mistral/gemma); BPE/WPM families default to false.
+    // An explicit key always wins. Models like Qwen2 and MiniCPM-V omit the
+    // key entirely, so defaulting true there poisons prompts with a BOS.
+    let default_add_bos = matches!(
+        model_type.as_str(),
+        "llama" | "mistral" | "gemma" | "gemma4" | "gemma6"
+    );
     let flags = TokenizationFlags {
-        add_bos_token: kv_bool!(kv_pairs, "tokenizer.ggml.add_bos_token").unwrap_or(true),
+        add_bos_token: kv_bool!(kv_pairs, "tokenizer.ggml.add_bos_token")
+            .unwrap_or(default_add_bos),
         add_eos_token: kv_bool!(kv_pairs, "tokenizer.ggml.add_eos_token").unwrap_or(false),
         add_space_prefix: kv_bool!(kv_pairs, "tokenizer.ggml.add_space_prefix").unwrap_or(true),
         clean_spaces: kv_bool!(kv_pairs, "tokenizer.ggml.clean_spaces").unwrap_or(false),
