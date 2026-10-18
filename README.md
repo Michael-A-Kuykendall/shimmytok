@@ -5,7 +5,7 @@
 ### Pure Rust tokenizer for GGUF models
 **100% llama.cpp compatible • zero C++ • just works**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Trans rights](https://pride-badges.pony.workers.dev/static/v1?label=trans%20rights&stripeWidth=6&stripeColors=5BCEFA,F5A9B8,FFFFFF,F5A9B8,5BCEFA)](https://translifeline.org/) [![LGBTQ+ friendly](https://pride-badges.pony.workers.dev/static/v1?label=lgbtq%2B%20friendly&stripeWidth=6&stripeColors=E40303,FF8C00,FFED00,008026,24408E,732982)](https://www.thetrevorproject.org/)
 [![Crates.io](https://img.shields.io/crates/v/shimmytok.svg)](https://crates.io/crates/shimmytok)
 [![Rust](https://img.shields.io/badge/rust-stable-brightgreen.svg)](https://rustup.rs/)
 [![💝 Sponsor](https://img.shields.io/badge/💝_Sponsor-ea4aaa?style=flat&logo=github&logoColor=white)](https://github.com/sponsors/Michael-A-Kuykendall)
@@ -29,7 +29,7 @@
 
 [**🎯 Become a Sponsor**](https://github.com/sponsors/Michael-A-Kuykendall) | See our amazing [sponsors](SPONSORS.md) 🙏
 
-**Thank you to our sponsors:** [ZephyrCloudIO](https://github.com/ZephyrCloudIO) (Corporate backer) · [gqf2008](https://github.com/gqf2008) (Coffee tier) · alistairheath (Coffee tier)
+**Thank you to our sponsors:** [ZephyrCloudIO](https://github.com/ZephyrCloudIO) (Corporate backer) · alistairheath (Coffee tier)
 
 ---
 
@@ -45,16 +45,6 @@ When you download a GGUF model, the tokenizer is embedded inside. Most Rust proj
 - Roll their own — risk of incompatibility
 
 **shimmytok extracts and runs the tokenizer directly from your GGUF file**, producing identical output to llama.cpp.
-
-## 🎯 Current Highlights
-
-The current unreleased changes add generic multimodal-token plumbing without
-adding model-specific behavior:
-
-- ✅ **External special-token mappings** — opt-in marker-to-token mappings can
-  be supplied per encode operation without mutating shared tokenizer state.
-- ✅ **Preserved GGUF metadata** — model-specific scalar, string, and array
-  values are available through a read-only typed metadata map.
 
 ## 🎯 v0.8.0 Highlights
 
@@ -170,24 +160,6 @@ let text = tokenizer.decode(&tokens, true)?;    // true = skip special tokens
 let piece = tokenizer.decode_single(token_id, false)?;
 ```
 
-### External Special Tokens
-
-External markers are parsed only when `parse_special` is enabled. The supplied
-IDs must be in the tokenizer vocabulary; built-in-marker collisions and duplicate
-external markers are rejected.
-
-```rust
-use shimmytok::{EncodeOptions, SpecialTokenOverride};
-
-let options = EncodeOptions::with_parse_special(true, true);
-let overrides = [SpecialTokenOverride::new("<image>", image_token_id)];
-let tokens = tokenizer.encode_with_external_special_tokens(
-    "Describe <image>",
-    &options,
-    &overrides,
-)?;
-```
-
 ### Metadata
 
 ```rust
@@ -196,7 +168,6 @@ tokenizer.bos_token()     // → TokenId
 tokenizer.eos_token()     // → TokenId
 tokenizer.model_type()    // → &str ("llama", "gpt2", etc.)
 tokenizer.pre_type()      // → Option<&str> (pre-tokenization pattern)
-tokenizer.metadata()      // → &HashMap<String, GGUFValue>
 ```
 
 ### Batch & Advanced
@@ -256,3 +227,14 @@ Dual-licensed **MIT OR Apache-2.0** — free forever, no strings attached.
 
 **Maintainer**: Michael A. Kuykendall  
 **Mission**: Pure Rust tokenization for the LLM ecosystem
+
+## Support
+
+This project is a safe space. Trans rights are human rights.
+
+If you or someone you love needs support:
+
+- [The Trevor Project](https://www.thetrevorproject.org/) — 24/7 for LGBTQ+ young people. Call 1-866-488-7386 or text START to 678-678
+- [Trans Lifeline](https://translifeline.org/) — peer support run by and for trans people. US: 877-565-8860
+- [988 Suicide & Crisis Lifeline](https://988lifeline.org/) — call or text 988
+
