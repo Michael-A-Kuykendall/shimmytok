@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Trans rights](https://pride-badges.pony.workers.dev/static/v1?label=trans%20rights&stripeWidth=6&stripeColors=5BCEFA,F5A9B8,FFFFFF,F5A9B8,5BCEFA)](https://translifeline.org/) [![LGBTQ+ friendly](https://pride-badges.pony.workers.dev/static/v1?label=lgbtq%2B%20friendly&stripeWidth=6&stripeColors=E40303,FF8C00,FFED00,008026,24408E,732982)](https://www.thetrevorproject.org/)
 [![Crates.io](https://img.shields.io/crates/v/shimmytok.svg)](https://crates.io/crates/shimmytok)
 [![Rust](https://img.shields.io/badge/rust-stable-brightgreen.svg)](https://rustup.rs/)
-[![💝 Sponsor](https://img.shields.io/badge/💝_Sponsor-ea4aaa?style=flat&logo=github&logoColor=white)](https://github.com/sponsors/Michael-A-Kuykendall)
+[![Sponsor](https://img.shields.io/badge/%E2%9D%A4%EF%B8%8F-Sponsor-ea4aaa?logo=github)](https://github.com/sponsors/Michael-A-Kuykendall)
 
 </div>
 
@@ -16,19 +16,18 @@
 
 **shimmytok is free forever.** MIT licensed, no strings attached.
 
-💝 **If shimmytok helps you, consider [sponsoring](https://github.com/sponsors/Michael-A-Kuykendall).**
+### Support
 
-### 💝 Support shimmytok
+This project is independently maintained and free forever. Sponsorship helps fund ongoing development, certification, compatibility work, and releases.
 
-🚀 **If shimmytok helps you, consider [sponsoring](https://github.com/sponsors/Michael-A-Kuykendall) — 100% of support goes to keeping it free forever.**
+[Sponsor on GitHub](https://github.com/sponsors/Michael-A-Kuykendall) · [Buy Me a Coffee](https://www.buymeacoffee.com/michaelakuykendall)
 
-- **$5/month**: Coffee tier ☕ — Eternal gratitude + sponsor badge
-- **$25/month**: Bug prioritizer 🐛 — Priority support + name in [SPONSORS.md](SPONSORS.md)
-- **$100/month**: Corporate backer 🏢 — Logo placement + monthly office hours
-- **$500/month**: Infrastructure partner 🚀 — Direct support + roadmap input
+Any amount is appreciated. Suggested tiers:
 
-[**🎯 Become a Sponsor**](https://github.com/sponsors/Michael-A-Kuykendall) | See our amazing [sponsors](SPONSORS.md) 🙏
-
+- **$5/month** — Thanks
+- **$15/month** — Supporter
+- **$50/month** — Backer
+- **Custom** — [Email for invoicing](mailto:michaelallenkuykendall@gmail.com)
 
 ---
 
@@ -236,4 +235,3 @@ If you or someone you love needs support:
 - [The Trevor Project](https://www.thetrevorproject.org/) — 24/7 for LGBTQ+ young people. Call 1-866-488-7386 or text START to 678-678
 - [Trans Lifeline](https://translifeline.org/) — peer support run by and for trans people. US: 877-565-8860
 - [988 Suicide & Crisis Lifeline](https://988lifeline.org/) — call or text 988
-
