@@ -50,20 +50,19 @@ By making a contribution to this project, I certify that:
 
 ## How to Sign Your Commits
 
-### Option 1: Automatic Sign-off (Recommended)
+### Commit sign-off
 
-Configure git to automatically sign off your commits:
+For approved collaboration, set the identity that owns the contribution:
 
 ```bash
 git config user.name "Your Name"
 git config user.email "your.email@example.com"
-git config format.signoff true
+git commit --signoff -m "Describe the approved change"
 ```
 
-Then commit normally:
-```bash
-git commit -m "Fix tokenization bug"
-```
+The `--signoff` (or `-s`) option adds the Signed-off-by trailer to that commit.
+`format.signoff` configures format-patch output; it does not automatically sign
+ordinary commits. Verify the trailer before submitting approved work.
 
 ### Option 2: Manual Sign-off
 
@@ -94,7 +93,9 @@ git rebase --signoff HEAD~3  # Last 3 commits
 
 ## DCO Check
 
-All pull requests are automatically checked for DCO compliance. The DCO bot will:
+Maintainer acceptance requires DCO compliance for approved collaboration. A
+workflow definition is not proof that a hosted bot ran for this release.
+Maintainer review must:
 
 - ✅ **Pass**: All commits are properly signed off
 - ❌ **Fail**: One or more commits are missing sign-off
@@ -106,7 +107,7 @@ If the DCO check fails:
    ```bash
    git push --force-with-lease origin your-branch
    ```
-3. **The DCO check will automatically re-run**
+3. **Request maintainer re-review of the corrected commits**
 
 ## Corporate Contributions
 
@@ -155,7 +156,7 @@ For such cases, contact the maintainer at michaelallenkuykendall@gmail.com to di
 ## Enforcement
 
 - **All commits** must be signed off to be accepted
-- **DCO bot** automatically checks all pull requests
+- **Maintainer review** requires sign-off on approved contributions; hosted-check execution is not certified by this release
 - **Maintainers** will not merge unsigned commits
 - **No exceptions** - this protects both contributors and the project
 

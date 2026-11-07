@@ -144,15 +144,20 @@ const TINYLLAMA_GGUF: &str =
 
 fn model_path(rel: &str) -> Option<String> {
     let root = std::env::var("SHIMMYTOK_MODEL_ROOT")
-        .unwrap_or_else(|_| "/home/michael/models".to_string());
+        .expect("set SHIMMYTOK_MODEL_ROOT for opt-in model fixtures");
     let p = format!("{root}/{rel}");
-    std::path::Path::new(&p).exists().then_some(p)
+    assert!(
+        std::path::Path::new(&p).is_file(),
+        "required model fixture is missing"
+    );
+    Some(p)
 }
 
 /// The exact rendered prompt captured from the MiniCPM-V GgufJinja path.
 const MINICPM_RENDERED_PROMPT: &str = "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n<image>What text appears in the center of this screen?<|im_end|>\n<|im_start|>assistant\n";
 
 #[test]
+#[ignore = "requires explicitly provisioned model fixture; NOT_RUN by default"]
 fn minicpm_v26_bpe_absent_key_must_not_prepend_bos() {
     let Some(path) = model_path(MINICPM_GGUF) else {
         eprintln!("skip: MiniCPM GGUF not present");
@@ -190,6 +195,7 @@ fn minicpm_v26_bpe_absent_key_must_not_prepend_bos() {
 }
 
 #[test]
+#[ignore = "requires explicitly provisioned model fixture; NOT_RUN by default"]
 fn minicpm_v26_wrapper_tokens_exist_in_vocab() {
     let Some(path) = model_path(MINICPM_GGUF) else {
         eprintln!("skip: MiniCPM GGUF not present");
@@ -205,6 +211,7 @@ fn minicpm_v26_wrapper_tokens_exist_in_vocab() {
 }
 
 #[test]
+#[ignore = "requires explicitly provisioned model fixture; NOT_RUN by default"]
 fn tinyllama_spm_keeps_bos() {
     let Some(path) = model_path(TINYLLAMA_GGUF) else {
         eprintln!("skip: TinyLlama GGUF not present");
@@ -217,6 +224,7 @@ fn tinyllama_spm_keeps_bos() {
 }
 
 #[test]
+#[ignore = "requires explicitly provisioned model fixture; NOT_RUN by default"]
 fn qwen2_comparator_with_explicit_key_unchanged() {
     let Some(path) = model_path(QWEN2_05B_GGUF) else {
         eprintln!("skip: Qwen2 comparator GGUF not present");

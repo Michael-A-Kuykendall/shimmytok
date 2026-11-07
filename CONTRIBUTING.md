@@ -6,8 +6,8 @@
 
 shimmytok is **open source** but **not open contribution**.
 
-- The code is freely available under the MIT license
-- You can fork, modify, use, and learn from it without restriction
+- The code is available under MIT OR Apache-2.0; retain license and attribution notices
+- Forking, modification and use follow the chosen license terms, including its notice requirements
 - **Pull requests are not accepted by default**
 - All architectural, roadmap, and merge decisions are made by the project maintainer
 
@@ -61,7 +61,7 @@ If a contribution is discussed and approved:
 Any accepted work must align with:
 - **Pure Rust**: No C++ dependencies
 - **GGUF-focused**: Direct loading from model files
-- **llama.cpp compatible**: Match reference implementation
+- **Reference compatibility**: Compare exact fixture hashes, IDs and options against the selected reference version
 - **Correctness over performance**: Get it right first
 - **Minimal dependencies**: Lightweight and focused
 - **Free Forever**: No features that could lead to paid tiers
@@ -71,13 +71,13 @@ Any accepted work must align with:
 All contributions must be signed off with the Developer Certificate of Origin. See [DCO.md](DCO.md) for details.
 
 ```bash
-git config format.signoff true  # Auto sign-off all commits
+git commit --signoff -m "Describe the approved change"
 ```
 
 ## Why This Model?
 
 Building a reliable tokenizer requires tight control over correctness. This ensures:
-- Perfect match with llama.cpp reference implementation
+- Fixture-specific comparisons with a pinned llama.cpp reference; no universal parity guarantee
 - No ownership disputes or governance overhead
 - Quality control without committee delays
 - Clear direction for the project's future

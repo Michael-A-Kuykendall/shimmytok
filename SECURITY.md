@@ -7,7 +7,7 @@ receive fixes only for critical issues.
 
 | Version | Supported |
 |---------|-----------|
-| 0.8.x   | ✅ Active  |
+| 0.8.x   | Maintained line; use the latest available patched release (0.8.5 is the coordinated candidate) |
 | < 0.8   | ❌ EOL    |
 
 ## Reporting a Vulnerability
@@ -131,9 +131,9 @@ For critical vulnerabilities that are being actively exploited:
 shimmytok includes several built-in security features:
 
 - **Memory Safety**: Built with Rust for memory-safe execution
-- **Input Size Limits**: MAX_INPUT_SIZE prevents memory exhaustion
-- **Token Count Limits**: MAX_OUTPUT_TOKENS prevents unbounded allocation
-- **GGUF Validation**: Strict parsing with error handling
+- **BPE/SentencePiece input bounds**: these encode paths check the 10 MiB MAX_INPUT_SIZE bound; this is not universal memory-exhaustion immunity
+- **BPE/SentencePiece token bounds**: these paths apply MAX_OUTPUT_TOKENS (1,000,000); other implementations require their own resource review
+- **GGUF metadata validation**: shared ParserLimits, checked arithmetic and allocation budgets; see [0.8.5 parser security notes](docs/GGUF_SECURITY.md)
 - **No Unsafe Code**: Pure safe Rust implementation
 - **Minimal Dependencies**: Three direct dependencies (`fancy-regex`, `rayon`, `thiserror`)
 
@@ -157,8 +157,8 @@ This security policy covers:
 ## Known Limitations
 
 - **GGUF Format**: Only supports v2 and v3. Older/newer versions may not parse correctly.
-- **Input Size**: Limited to 10MB (MAX_INPUT_SIZE). Larger inputs are rejected.
-- **Token Count**: Limited to 1M tokens (MAX_OUTPUT_TOKENS). Prevents unbounded allocation.
+- **Input Size**: the BPE/SentencePiece encode paths check 10 MiB (MAX_INPUT_SIZE); do not extend that statement to all dispatcher implementations.
+- **Token Count**: BPE/SentencePiece apply MAX_OUTPUT_TOKENS; accepted input may still consume substantial memory. Downstream services must bound concurrency and resources.
 - **Malicious Models**: While we validate structure, we cannot detect all malicious payloads in GGUF files.
 
 ## Legal

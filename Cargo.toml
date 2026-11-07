@@ -1,13 +1,14 @@
 [package]
 name = "shimmytok"
-version = "0.8.4"
+version = "0.8.5"
 edition = "2021"
 rust-version = "1.70"
 authors = ["shimmytok contributors"]
-description = "Pure Rust tokenizer for GGUF models with llama.cpp compatibility (SentencePiece + BPE + WPM + UGM + RWKV)"
+description = "Rust GGUF tokenizer implementations with shared checked metadata parsing and fixture-scoped compatibility"
 keywords = ["tokenizer", "gguf", "llama", "sentencepiece", "llm"]
 categories = ["text-processing", "encoding", "parser-implementations"]
 license = "MIT OR Apache-2.0"
+exclude = [".gitignore", ".gitattributes", "PRIVATE-INTEGRATION.md", "docs/**", "!docs/API_STABILITY.md", "!docs/GGUF_SECURITY.md", "scripts/**"]
 readme = "README.md"
 repository = "https://github.com/Michael-A-Kuykendall/shimmytok"
 documentation = "https://docs.rs/shimmytok"

@@ -1,4 +1,4 @@
-# API Stability Contract
+# API Stability Contract — ShimmyTok 0.8.5
 
 This document defines which parts of the shimmytok public API are stable,
 what downstream code (primarily airframe) depends on, and the rules for how
@@ -11,12 +11,12 @@ each item may change.
 | Level | Meaning |
 |-------|---------|
 | **Stable** | No breaking changes without a semver major bump |
-| **Committed** | Stable within the current minor series; may change at the next minor (0.9.0) with notice in CHANGELOG |
+| **Committed** | Stable within the 0.8.x series; compatibility changes require a versioned changelog notice |
 | **Experimental** | May change in any release; documented as `⚠️ Experimental` |
 
 ---
 
-## What airframe depends on (as of v0.7.2)
+## Airframe 0.4.5 integration with ShimmyTok 0.8.5
 
 Determined by scanning `airframe/src` for all `shimmytok::` usages.
 
@@ -61,7 +61,7 @@ only change at 0.9.0 with a CHANGELOG note.
 
 | Method | Signature | Status | Contract |
 |--------|-----------|--------|----------|
-| `tokenizer.encode_batch` | `(texts: &[&str], add_special: bool) -> Result<Vec<Vec<TokenId>>, Error>` | **Committed** | Universally available (native, WASM, and `--no-default-features`). Output order matches input order. Each element equals the corresponding single `encode` call. On multiple failures, returns the error at the **lowest failing input index**, identical across sequential and parallel backends. |
+| `tokenizer.encode_batch` | `(texts: &[&str], add_special: bool) -> Result<Vec<Vec<TokenId>>, Error>` | **Committed** | Available in the public API with sequential or optional parallel execution; target builds not executed in this release record are NOT_RUN. Output order matches input order. Each element equals the corresponding single `encode` call. On multiple failures, returns the error at the **lowest failing input index**, identical across sequential and parallel backends. |
 | `tokenizer.get_token` | `(text: &str) -> Option<TokenId>` | **Committed** | Exact-match lookup only. No normalization, alternate-space handling, or special parsing. Returns the vocabulary ID for an exact token piece, or `None` if absent. |
 
 `encode_batch` never exposes Rayon (or any parallelism library) in its
@@ -89,15 +89,18 @@ It preserves the existing `EncodeOptions` layout and does not mutate shared
 
 | Feature | Default | Public? | Meaning |
 |---------|---------|---------|---------|
-| `parallel` | **on** | Internal (`#[doc(hidden)]`) | Enables the Rayon parallel batch backend on native targets. Disabling it (or building for WASM/WASI) falls back to a sequential batch backend with identical, deterministic results. Never changes the public API surface. |
+| `parallel` | **on** | Internal (`#[doc(hidden)]`) | Enables the optional Rayon batch implementation; disabling it selects sequential code. API output-order/error contracts are unchanged, while unexecuted target configurations remain NOT_RUN. |
 
 Consumers should not rely on the presence or absence of `parallel`; it is an
-implementation detail. `encode_batch` is available and behaves identically in
-all configurations.
+implementation detail. `encode_batch` remains available; output-order and
+lowest-failing-index contracts are not a claim that every target was certified.
 
 ---
 
-## What is NOT used by airframe (safe to change internally)
+## Additional public surface
+
+Not every consumer call is listed above. Being unused by Airframe is not
+permission to break another consumer's API; review compatibility and tests.
 
 - `DecodeOptions`
 - `decode` / `decode_with_options`
@@ -131,7 +134,7 @@ all configurations.
 - New methods added to `Tokenizer` (additive, not breaking).
 - MSRV raised (announced in CHANGELOG with advance notice).
 
-### What WILL break at a major version bump (1.0.0, 2.0.0, …)
+### Changes requiring a breaking-compatibility review
 
 - Removing or renaming any stable method.
 - Changing return types.
@@ -139,30 +142,31 @@ all configurations.
 
 ---
 
-## Updating airframe
+## Updating Airframe for 0.8.5
 
-To upgrade the pinned version:
+Airframe 0.4.5 consumes the coordinated tokenizer:
 
 ```toml
-# airframe/Cargo.toml
-shimmytok = "0.7.2"   # or "0.7" to track the latest 0.7.x automatically
+# Airframe Cargo.toml
+shimmytok = "0.8.5"
 ```
 
-Any `0.7.x` release is safe to pull without code changes in airframe.
-A `0.8.0` release will be accompanied by a migration note here and in CHANGELOG.
-
----
+The 0.7.2 example and predictions about a future 0.8.0 migration are superseded.
+The current release retains the existing tokenizer API and special-token
+semantics. The new shared `manifest` module is the checked GGUF interpretation
+used by Airframe's descriptor admission; it does not certify an execution graph.
+See [GGUF_SECURITY.md](GGUF_SECURITY.md) for parser limits and reader regressions.
 
 ## Verification
 
-To confirm no breaking changes were introduced between versions, run:
-
 ```bash
-# In the shimmytok repo
-cargo test --quiet
-
-# In the airframe repo (after bumping the version)
-cargo build --quiet
+cargo test --locked --test gguf_untrusted_lengths -- --test-threads=1
+cargo test --locked -- --test-threads=1
 ```
 
-Both must pass clean before tagging a release.
+Run these in the tokenizer source checkout. Consumer integration also needs the
+engine's typed manifest/admission tests and exact model/reference comparisons.
+Compiling successfully alone does not prove tokenizer parity, inference
+correctness, platform support or release readiness. Unavailable fixtures and
+targets stay NOT_RUN. Publication requires separate maintainer approval;
+these local commands do not authorize a tag or upload.

@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.8.5] — 2026-11-06
+
+- Exclude development housekeeping files and internal tracker references from crate archives; preserve runtime behavior and existing license rights.
+
+- Documentation errata: make 0.8.5 integration explicit, bound compatibility and platform claims to executed fixtures, document shared GGUF parser allocation defenses, and correct dual-license references. No executable tokenizer/API/dependency change.
+- Clarify that existing GGUF BOS defaults and explicit overrides are retained; no additional BOS correction is included. Archived older release instructions are historical, not current support promises.
+
+- Add permanent public-reader regression coverage for 5,000,000,000-element metadata arrays, allocation budgets, overflow and truncation; preserve valid bounded tokenizer vocabularies. No production tokenizer behavior changes.
+
+
+- Publish a distinct candidate for the shared checked GGUF manifest and tokenizer corrections already validated with Airframe.
+- Preserve existing tokenizer APIs, explicit special-token semantics and the frozen BOS behavior; no unmerged Llama BOS-default change is included.
+- Consume this package before Airframe 0.4.5 to prevent old-registry API substitution.
+
+
 All notable changes to shimmytok will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -332,7 +347,9 @@ Initial release.
 - Comprehensive error handling via `thiserror`.
 - 30 tests with 100 % llama.cpp match on LLaMA, Llama-2, Llama-3, Phi-3, GPT-2.
 
-[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.8.3...HEAD
+[Unreleased]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.8.5...HEAD
+[0.8.5]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.8.4...v0.8.5
+[0.8.4]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.8.1...v0.8.3
 [0.8.0]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.4...v0.8.0
 [0.7.4]: https://github.com/Michael-A-Kuykendall/shimmytok/compare/v0.7.3...v0.7.4

@@ -3,9 +3,9 @@
 <img src="assets/shimmytok-logo.png" alt="shimmytok - Pure Rust tokenizer for GGUF models" width="400">
 
 ### Pure Rust tokenizer for GGUF models
-**100% llama.cpp compatible • zero C++ • just works**
+**ShimmyTok 0.8.5 • checked GGUF metadata • fixture-scoped compatibility**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Trans rights](https://pride-badges.pony.workers.dev/static/v1?label=trans%20rights&stripeWidth=6&stripeColors=5BCEFA,F5A9B8,FFFFFF,F5A9B8,5BCEFA)](https://translifeline.org/) [![LGBTQ+ friendly](https://pride-badges.pony.workers.dev/static/v1?label=lgbtq%2B%20friendly&stripeWidth=6&stripeColors=E40303,FF8C00,FFED00,008026,24408E,732982)](https://www.thetrevorproject.org/)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT_OR_Apache--2.0-blue.svg)](LICENSE-MIT) [![Trans rights](https://pride-badges.pony.workers.dev/static/v1?label=trans%20rights&stripeWidth=6&stripeColors=5BCEFA,F5A9B8,FFFFFF,F5A9B8,5BCEFA)](https://translifeline.org/) [![LGBTQ+ friendly](https://pride-badges.pony.workers.dev/static/v1?label=lgbtq%2B%20friendly&stripeWidth=6&stripeColors=E40303,FF8C00,FFED00,008026,24408E,732982)](https://www.thetrevorproject.org/)
 [![Crates.io](https://img.shields.io/crates/v/shimmytok.svg)](https://crates.io/crates/shimmytok)
 [![Rust](https://img.shields.io/badge/rust-stable-brightgreen.svg)](https://rustup.rs/)
 [![Sponsor](https://img.shields.io/badge/%E2%9D%A4%EF%B8%8F-Sponsor-ea4aaa?logo=github)](https://github.com/sponsors/Michael-A-Kuykendall)
@@ -14,7 +14,7 @@
 
 ---
 
-**shimmytok is free forever.** MIT licensed, no strings attached.
+**shimmytok is free forever.** Choose MIT OR Apache-2.0 and retain the applicable license notices.
 
 ### Support
 
@@ -31,178 +31,109 @@ Any amount is appreciated. Suggested tiers:
 
 ---
 
-## ✨ What is shimmytok?
+## ShimmyTok 0.8.5
 
-shimmytok is a **pure Rust tokenizer library** that reads tokenizers directly from GGUF model files. No Python, no C++, no separate tokenizer files — just point it at your `.gguf` and go.
+ShimmyTok is a Rust library for loading GGUF tokenizers. This release shares a
+checked GGUF manifest parser with Airframe, preserves the existing tokenizer API,
+and adds permanent malformed-array allocation regression tests. See the
+[versioned changelog](CHANGELOG.md) and [parser security notes](docs/GGUF_SECURITY.md).
 
-### Why does this matter?
+Tokenizer support is not inference support. Reading a vocabulary or recognizing a
+model name does not certify its neural-network execution in Airframe or Shimmy.
+Compatibility comparisons apply to the exact tested fixtures and options; there
+is no universal llama.cpp parity guarantee.
 
-When you download a GGUF model, the tokenizer is embedded inside. Most Rust projects either:
-- Bind to C++ (llama.cpp FFI) — adds build complexity
-- Use separate tokenizer files — requires extra downloads
-- Roll their own — risk of incompatibility
+## Implementation coverage
 
-**shimmytok extracts and runs the tokenizer directly from your GGUF file**, producing identical output to llama.cpp.
+The current dispatcher in `Tokenizer::from_vocab` selects these implementations:
 
-## 🎯 v0.8.0 Highlights
+| GGUF tokenizer model | Implementation |
+|---|---|
+| `llama`, `mistral`, `gemma`, `gemma4`, `gemma6` | SentencePiece |
+| `gpt2`, `qwen`, `qwen2` | BPE |
+| `bert`, `wpm` | WordPiece |
+| `rwkv` | RWKV |
+| `t5`, `ugm` | Unigram |
+| `plamo2` | PLaMo-2 |
 
-This release makes the batch engine **portable and deterministic** without breaking any
-Stability-guaranteed API:
-
-- ✅ **Optional Rayon** — `parallel` feature (default on) makes Rayon an optional
-  dependency; `--no-default-features` and WASM/WASI build with a sequential
-  backend and **identical, deterministic results**.
-- ✅ **Immutable, lock-free BPE** — regexes and merge ranks prepared once at
-  construction; no per-encode `Mutex`.
-- ✅ **Deterministic batch errors** — `encode_batch` returns the lowest failing
-  input index, identical across both backends.
-- ✅ **`get_token`** — exact-match single-token lookup, like candle's
-  `TokenOutputStream`.
-- ✅ **llama.cpp tokenizer support** — SPM, BPE, WPM validated token-for-token;
-  SPM, BPE, WPM, RWKV, and UGM validated; 41 BPE pre-tokenization patterns.
-
-## Features
-
-- 🦀 **Pure Rust** — No C++ dependencies, compiles anywhere
-- 📦 **Load from GGUF** — Tokenizer embedded in model file
-- ✅ **Validated** — SPM, BPE, WPM, RWKV, and UGM tested token-for-token against llama.cpp
- - ⚡ **Fast** — Batch encoding with optional Rayon parallelism for large workloads
-- 🌊 **Streaming** — Token-by-token decoding for LLM output
-- 🔒 **Safe** — Zero unsafe code in critical paths
+Other tokenizer-model values return an unsupported-model error. Implementation
+availability is separate from independent token-for-token fixture validation.
+A family name is not a promise that every vocabulary, normalization rule or
+pre-tokenizer revision is compatible.
 
 ## Installation
 
+After 0.8.5 is published, add the library to a Rust project:
+
+```bash
+cargo add shimmytok@0.8.5
+```
+
+Or use:
+
 ```toml
 [dependencies]
-shimmytok = "0.8"
+shimmytok = "0.8.5"
 ```
+
+This package is a library, not a `cargo install` command-line application.
+The default `parallel` feature enables optional Rayon batch processing.
+`default-features = false` selects the sequential batch implementation.
 
 ## Quick Start
 
+Use an existing GGUF file containing a supported tokenizer:
+
 ```rust
-use shimmytok::Tokenizer;
+use shimmytok::{EncodeOptions, Tokenizer};
 
-// Load tokenizer from any GGUF model
-let tokenizer = Tokenizer::from_gguf_file("llama-3.gguf")?;
-
-// Encode text to tokens
-let tokens = tokenizer.encode("Hello, world!", true)?;
-println!("Tokens: {:?}", tokens);
-
-// Decode back to text
-let text = tokenizer.decode(&tokens, true)?;
-println!("Text: {}", text);
-
-// Stream tokens one at a time (for LLM generation)
-for token_id in tokens {
-    print!("{}", tokenizer.decode_single(token_id, false)?);
+fn main() -> Result<(), shimmytok::Error> {
+    let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
+    let options = EncodeOptions::with_parse_special(true, true);
+    let ids = tokenizer.encode_with_options("Hello, world!", &options)?;
+    let decoded = tokenizer.decode(&ids, true)?;
+    println!("{decoded}");
+    Ok(())
 }
 ```
 
-## Validated Models
+Choose special-token options to match the actual model/template contract. Avoid
+adding a second BOS to a prompt whose template already supplies it. Explicit
+GGUF special-token metadata takes precedence over family defaults; this release
+does not add another BOS-default correction.
 
-All models produce **exact token match** with `llama-tokenize`:
+## API and compatibility
 
-| Model | Tokenizer | Status |
-|-------|-----------|--------|
-| llama-spm | SentencePiece | ✅ Match |
-| gpt-2 | BPE | ✅ Match |
-| qwen2 | BPE | ✅ Match |
-| starcoder | BPE | ✅ Match |
-| deepseek-coder | BPE | ✅ Match |
-| deepseek-llm | BPE | ✅ Match |
-| falcon | BPE | ✅ Match |
-| command-r | BPE | ✅ Match |
-| refact | BPE | ✅ Match |
-| bert-bge | WordPiece | ✅ Match |
+`encode`, `encode_with_options`, `decode`, `decode_single`, `encode_batch`,
+`get_token`, special-token accessors and read-only `metadata` remain available.
+See the [API stability contract](docs/API_STABILITY.md) for signatures, opt-in
+external-special-token behavior and upgrade boundaries.
 
-## Tokenizer Algorithms
+Batch output preserves input order; each item follows the corresponding single
+encode operation. The sequential/parallel error contract selects the lowest
+failing input index. No new universal performance or cross-platform
+certification is implied by those API contracts.
 
-shimmytok implements all tokenizer types from llama.cpp:
+The coordinated dense-inference fixtures use exact Qwen3 and Llama model/token
+hashes and reference conditions documented by
+[Shimmy](https://github.com/Michael-A-Kuykendall/shimmy/blob/main/docs/SUPPORTED_MODELS.md).
+Those engine tests do not certify every tokenizer implementation above against
+every llama.cpp revision. New models require their own exact-ID comparisons,
+including normalization, added tokens, byte fallback and prompt framing.
 
-| Type | Algorithm | Models |
-|------|-----------|--------|
-| **SPM** | SentencePiece with resegment | LLaMA, Mistral, Gemma |
-| **BPE** | Byte-Pair Encoding + regex pre-tokenization | GPT-2, Qwen, StarCoder, DeepSeek |
-| **WPM** | WordPiece (BERT-style) | BERT, BGE embeddings |
-| **UGM** | Unigram (Viterbi DP) | T5, mT5 |
-| **RWKV** | Trie-based greedy | RWKV World |
+## Security and platforms
 
-### BPE Pre-tokenization Patterns
+The public GGUF reader validates declared lengths, tensor bounds/alignment and
+checked allocation budgets before consuming untrusted payloads. The permanent
+[security regression](docs/GGUF_SECURITY.md) exercises impossible array counts,
+budgets, overflow and truncation alongside a valid bounded vocabulary.
+These checks do not make arbitrary model files harmless or provide unbounded
+resource guarantees for every tokenizer algorithm.
 
-shimmytok supports **41 different regex patterns** for BPE pre-tokenization, covering:
-
-- GPT-2/GPT-3/GPT-4 style
-- Llama-3 style  
-- Qwen/Qwen2 style
-- DeepSeek (coder + LLM variants)
-- StarCoder/StarCoder2
-- Falcon, Command-R, DBRX
-- And many more...
-
-## API Reference
-
-### Core Methods
-
-```rust
-// Load from GGUF file
-let tokenizer = Tokenizer::from_gguf_file("model.gguf")?;
-
-// Encode text → tokens
-let tokens = tokenizer.encode("Hello", true)?;  // true = add BOS/EOS
-
-// Decode tokens → text  
-let text = tokenizer.decode(&tokens, true)?;    // true = skip special tokens
-
-// Streaming decode (for LLM generation)
-let piece = tokenizer.decode_single(token_id, false)?;
-```
-
-### Metadata
-
-```rust
-tokenizer.vocab_size()    // → usize
-tokenizer.bos_token()     // → TokenId
-tokenizer.eos_token()     // → TokenId
-tokenizer.model_type()    // → &str ("llama", "gpt2", etc.)
-tokenizer.pre_type()      // → Option<&str> (pre-tokenization pattern)
-```
-
-### Batch & Advanced
-
-```rust
-// Batch encoding — always available; large native batches run in parallel
-let batch = tokenizer.encode_batch(&["text1", "text2"], true)?;
-
-// Exact-match single-token lookup (like candle's TokenOutputStream)
-let maybe_id = tokenizer.get_token("<|endoftext|>");  // → Option<TokenId>
-
-// Token introspection
-tokenizer.token_to_piece(token_id)?    // → Result<String, Error>
-tokenizer.token_type(token_id)         // → TokenType
-tokenizer.is_special_token(token_id)   // → bool
-```
-
-## Use Cases
-
-- **LLM Inference Engines** — Pure Rust inference without C++ bindings
-- **WASM Applications** — Run tokenization in the browser
-- **Embedded Systems** — No C++ toolchain required
-- **CLI Tools** — Inspect and debug GGUF tokenizers
-- **Research** — Understand tokenization without black boxes
-
-## Performance
-
-shimmytok prioritizes **correctness over speed**, but it's still fast:
-
-- Immutable per-model BPE state (regexes and merge ranks prepared once, no per-encode locks)
-- Batch encoding that dispatches to Rayon only when the workload is large enough
-  to outweigh scheduling overhead (measured crossover — see `benches/tokenization.rs`);
-  smaller batches, `--no-default-features`, and WASM/WASI run sequentially
-- Efficient trie structures for UGM/RWKV
-
-Batch results are always deterministic and order-preserving regardless of backend.
-For most use cases, tokenization is not the bottleneck — inference is.
+Local package tests ran on Linux under WSL. Other native platforms, WASM/WASI
+and minimum-toolchain certification are NOT_RUN in this release record.
+Rust portability or a sequential code path is not evidence of execution on a
+particular target. Use source builds and report exact target/toolchain failures.
 
 ## Links
 

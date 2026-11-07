@@ -67,6 +67,7 @@ pub mod bpe;
 pub mod byte_encoder;
 pub mod gguf;
 pub mod invariants;
+pub mod manifest;
 pub mod plamo2;
 pub mod rwkv;
 pub mod sentencepiece;
@@ -563,29 +564,28 @@ impl Tokenizer {
             tokens.push(self.vocab.bos_token_id());
         }
 
-        if options.parse_special {
-            let owned_map;
-            let special_map = match special_map {
+        let owned_map;
+        let special_map = if options.parse_special {
+            match special_map {
                 Some(map) => map,
                 None => {
                     owned_map = self.vocab.special_token_map();
                     &owned_map
                 }
-            };
-            let fragments = split_on_special_tokens(text, special_map);
-
-            for fragment in fragments {
-                match fragment {
-                    TextFragment::Special(token_id) => tokens.push(token_id),
-                    TextFragment::Text(t) => {
-                        if !t.is_empty() {
-                            tokens.extend(self.tokenizer_impl.encode(&t, &self.vocab)?);
-                        }
+            }
+        } else {
+            owned_map = self.vocab.user_defined_token_map();
+            &owned_map
+        };
+        for fragment in split_on_special_tokens(text, special_map) {
+            match fragment {
+                TextFragment::Special(id) => tokens.push(id),
+                TextFragment::Text(t) => {
+                    if !t.is_empty() {
+                        tokens.extend(self.tokenizer_impl.encode(&t, &self.vocab)?);
                     }
                 }
             }
-        } else {
-            tokens.extend(self.tokenizer_impl.encode(text, &self.vocab)?);
         }
 
         if options.add_special_tokens && self.vocab.add_eos_token() {

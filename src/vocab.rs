@@ -376,7 +376,10 @@ impl Vocabulary {
         }
 
         for (id, token_type) in self.token_types.iter().enumerate() {
-            if *token_type == TokenType::Control {
+            if matches!(
+                token_type,
+                TokenType::Control | TokenType::Unknown | TokenType::UserDefined
+            ) {
                 if let Some(text) = self.get_token_text(id as TokenId) {
                     map.insert(text.to_string(), id as TokenId);
                 }
@@ -385,7 +388,20 @@ impl Vocabulary {
 
         map
     }
-
+    pub(crate) fn user_defined_token_map(&self) -> HashMap<String, TokenId> {
+        self.token_types
+            .iter()
+            .enumerate()
+            .filter_map(|(id, kind)| {
+                if *kind == TokenType::UserDefined {
+                    self.get_token_text(id as TokenId)
+                        .map(|s| (s.to_owned(), id as TokenId))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
     #[must_use]
     pub fn add_bos_token(&self) -> bool {
         self.add_bos_token
