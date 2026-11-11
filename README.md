@@ -12,6 +12,8 @@
 
 </div>
 
+**Languages / 语言 / 語言:** English · [简体中文](docs/zh-CN/README.md) · [繁體中文](docs/zh-TW/README.md)
+
 ---
 
 **shimmytok is free forever.** Choose MIT OR Apache-2.0 and retain the applicable license notices.
@@ -63,7 +65,7 @@ pre-tokenizer revision is compatible.
 
 ## Installation
 
-After 0.8.5 is published, add the library to a Rust project:
+Add the published 0.8.5 library to a Rust project:
 
 ```bash
 cargo add shimmytok@0.8.5
@@ -130,8 +132,7 @@ budgets, overflow and truncation alongside a valid bounded vocabulary.
 These checks do not make arbitrary model files harmless or provide unbounded
 resource guarantees for every tokenizer algorithm.
 
-Local package tests ran on Linux under WSL. Other native platforms, WASM/WASI
-and minimum-toolchain certification are NOT_RUN in this release record.
+Local package tests ran on Linux under WSL. The later integrated engine qualification also exercised exact Qwen3/Llama token IDs on Apple M1 (Virtual), macOS 15.8.2. Broader standalone native-platform tokenizer suites, WASM/WASI and minimum-toolchain certification remain NOT_RUN.
 Rust portability or a sequential code path is not evidence of execution on a
 particular target. Use source builds and report exact target/toolchain failures.
 
