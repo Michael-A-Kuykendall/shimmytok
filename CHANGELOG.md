@@ -10,9 +10,9 @@
 - Add permanent public-reader regression coverage for 5,000,000,000-element metadata arrays, allocation budgets, overflow and truncation; preserve valid bounded tokenizer vocabularies. No production tokenizer behavior changes.
 
 
-- Publish a distinct candidate for the shared checked GGUF manifest and tokenizer corrections already validated with Airframe.
+- Published the verified shared checked GGUF manifest and tokenizer corrections in ShimmyTok 0.8.5.
 - Preserve existing tokenizer APIs, explicit special-token semantics and the frozen BOS behavior; no unmerged Llama BOS-default change is included.
-- Consume this package before Airframe 0.4.5 to prevent old-registry API substitution.
+- Airframe 0.4.5 and later 0.4.6 consume this unchanged 0.8.5 package; existing registry archives remain immutable.
 
 
 All notable changes to shimmytok will be documented in this file.
